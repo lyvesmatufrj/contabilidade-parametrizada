@@ -143,6 +143,11 @@ EVENT_COLUMNS: tuple[str, ...] = (
     "SPEC_VERSION",
 )
 
+ACCOUNT_ROLE_MAPPING_COLUMNS: tuple[str, ...] = (
+    "PAPEL_CONTABIL",
+    "COD_CTA",
+)
+
 JOURNAL_ENTRY_HEADER_COLUMNS: tuple[str, ...] = (
     "NUM_LCTO",
     "DT_LCTO",

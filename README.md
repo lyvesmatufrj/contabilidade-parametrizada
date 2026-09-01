@@ -2,7 +2,7 @@
 
 MVP simples do sistema contábil parametrizado.
 
-O contrato de implementação desta fase está em [`specs/README_specs_plan.md`](specs/README_specs_plan.md), com o Marco A implementado até as specs 00-05:
+O contrato de implementação desta fase está em [`specs/README_specs_plan.md`](specs/README_specs_plan.md), com o Marco A implementado até as specs 00-05 e a materialização Excel da Spec 06:
 
 - scaffold do projeto;
 - convenções canônicas de nomes e tipos;
@@ -11,5 +11,6 @@ O contrato de implementação desta fase está em [`specs/README_specs_plan.md`]
 - eventos econômicos (`u_t`) determinísticos e validados;
 - operador de escrituração para `Lambda_t`;
 - Livro Diário, Livro Razão (`Raz_t`) e balancete (`b_t`) derivados.
+- workbook Excel (`Wb_t`) como interface física auditável, regenerado pelo Python a partir de `CONFIG`, `PLANO_CONTAS`, `MAPEAMENTO_CONTAS` e `EVENTOS`.
 
-Ficam fora desta fase workbook Excel, BP, DRE, DFC, DVA, geração aleatória, banco de dados, API, ORM e qualquer implementação tributária.
+Ficam fora desta fase BP, DRE, DFC, DVA, geração aleatória, banco de dados, API, ORM e qualquer implementação tributária.

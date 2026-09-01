@@ -17,32 +17,20 @@ from accounting_sim.canonical import (
     EventType,
     JournalEntryType,
     PaymentTerm,
-    ReferentialIntegrityError,
     SimulationConfig,
     ValidationIssue,
     ValidationReport,
+)
+from accounting_sim.account_mapping import (
+    DEFAULT_ACCOUNT_ROLE_MAP,
+    account_role_map_as_dict,
+    build_default_account_role_mapping,
 )
 from accounting_sim.chart_of_accounts import get_analytic_accounts, validate_chart_of_accounts
 from accounting_sim.events import normalize_events, sort_events, validate_events
 
 
-ACCOUNT_CODE_MAP: dict[str, str] = {
-    "caixa": "1.1.01.01",
-    "banco": "1.1.01.02",
-    "clientes": "1.1.02.01",
-    "estoques": "1.1.03.01",
-    "imobilizado": "1.2.01.01",
-    "depreciacao_acumulada": "1.2.01.02",
-    "fornecedores": "2.1.01.01",
-    "capital_social": "3.1.01.01",
-    "receita_vendas": "4.1.01.01",
-    "cmv": "4.2.01.01",
-    "despesa_salarios": "4.3.01.01",
-    "despesa_aluguel": "4.3.01.02",
-    "despesa_utilidades": "4.3.01.03",
-    "despesa_depreciacao": "4.3.01.04",
-    "despesa_juros": "4.3.02.01",
-}
+ACCOUNT_CODE_MAP = DEFAULT_ACCOUNT_ROLE_MAP
 
 EXPENSE_CATEGORY_ACCOUNT_KEYS: dict[str, str] = {
     "salarios": "despesa_salarios",
@@ -63,6 +51,7 @@ class PostingResult:
 class _PostingBuilder:
     simulation_id: str
     rule_version: str
+    account_codes: dict[str, str]
     entry_counter: int = 0
     posting_counter: int = 0
 
@@ -117,12 +106,16 @@ class _PostingBuilder:
                 }
             )
 
+    def account(self, role: str) -> str:
+        return self.account_codes[role]
+
 
 def post_events(
     events: pd.DataFrame,
     chart_of_accounts: pd.DataFrame,
     simulation_config: SimulationConfig,
     *,
+    account_role_mapping: pd.DataFrame | None = None,
     rule_version: str = "posting_rules_v1",
 ) -> PostingResult:
     period = AccountingPeriod(simulation_config.start_date, simulation_config.end_date)
@@ -134,12 +127,13 @@ def post_events(
         raise AccountingInvariantError(_format_issues("Plano de contas inválido", chart_report))
 
     normalized_events = sort_events(normalize_events(events))
-    _validate_account_mapping(chart_of_accounts)
+    effective_mapping = account_role_mapping if account_role_mapping is not None else build_default_account_role_mapping()
+    account_codes = account_role_map_as_dict(effective_mapping, chart_of_accounts)
 
     headers: list[dict[str, object]] = []
     postings: list[dict[str, object]] = []
     links: list[dict[str, object]] = []
-    builder = _PostingBuilder(simulation_config.simulation_id, rule_version)
+    builder = _PostingBuilder(simulation_config.simulation_id, rule_version, account_codes)
 
     dispatch: dict[str, Callable[[pd.Series, _PostingBuilder, list[dict[str, object]], list[dict[str, object]], list[dict[str, object]]], None]] = {
         EventType.CAPITAL_CONTRIBUTION.value: _post_capital_contribution,
@@ -244,30 +238,30 @@ def validate_posting_result(
 
 def _post_capital_contribution(event: pd.Series, builder: _PostingBuilder, headers: list[dict[str, object]], postings: list[dict[str, object]], links: list[dict[str, object]]) -> None:
     amount = event["VL_EVENTO_CENTS"]
-    builder.add_entry(headers, postings, links, event, ((_financial_account(event), "D", amount), (_account("capital_social"), "C", amount)), 1, event["HIST"])
+    builder.add_entry(headers, postings, links, event, ((_financial_account(event, builder), "D", amount), (builder.account("capital_social"), "C", amount)), 1, event["HIST"])
 
 
 def _post_purchase_cash(event: pd.Series, builder: _PostingBuilder, headers: list[dict[str, object]], postings: list[dict[str, object]], links: list[dict[str, object]]) -> None:
     amount = event["VL_EVENTO_CENTS"]
-    builder.add_entry(headers, postings, links, event, ((_account("estoques"), "D", amount), (_financial_account(event), "C", amount)), 1, event["HIST"])
+    builder.add_entry(headers, postings, links, event, ((builder.account("estoques"), "D", amount), (_financial_account(event, builder), "C", amount)), 1, event["HIST"])
 
 
 def _post_purchase_credit(event: pd.Series, builder: _PostingBuilder, headers: list[dict[str, object]], postings: list[dict[str, object]], links: list[dict[str, object]]) -> None:
     amount = event["VL_EVENTO_CENTS"]
-    builder.add_entry(headers, postings, links, event, ((_account("estoques"), "D", amount), (_account("fornecedores"), "C", amount)), 1, event["HIST"])
+    builder.add_entry(headers, postings, links, event, ((builder.account("estoques"), "D", amount), (builder.account("fornecedores"), "C", amount)), 1, event["HIST"])
 
 
 def _post_supplier_payment(event: pd.Series, builder: _PostingBuilder, headers: list[dict[str, object]], postings: list[dict[str, object]], links: list[dict[str, object]]) -> None:
     amount = event["VL_EVENTO_CENTS"]
-    builder.add_entry(headers, postings, links, event, ((_account("fornecedores"), "D", amount), (_financial_account(event), "C", amount)), 1, event["HIST"])
+    builder.add_entry(headers, postings, links, event, ((builder.account("fornecedores"), "D", amount), (_financial_account(event, builder), "C", amount)), 1, event["HIST"])
 
 
 def _post_sale_cash(event: pd.Series, builder: _PostingBuilder, headers: list[dict[str, object]], postings: list[dict[str, object]], links: list[dict[str, object]]) -> None:
-    _post_sale(event, builder, headers, postings, links, _financial_account(event))
+    _post_sale(event, builder, headers, postings, links, _financial_account(event, builder))
 
 
 def _post_sale_credit(event: pd.Series, builder: _PostingBuilder, headers: list[dict[str, object]], postings: list[dict[str, object]], links: list[dict[str, object]]) -> None:
-    _post_sale(event, builder, headers, postings, links, _account("clientes"))
+    _post_sale(event, builder, headers, postings, links, builder.account("clientes"))
 
 
 def _post_sale(event: pd.Series, builder: _PostingBuilder, headers: list[dict[str, object]], postings: list[dict[str, object]], links: list[dict[str, object]], debit_account: str) -> None:
@@ -275,41 +269,28 @@ def _post_sale(event: pd.Series, builder: _PostingBuilder, headers: list[dict[st
     cost = event["VL_CUSTO_CENTS"]
     if cost is None or cost <= 0:
         raise AccountingInvariantError("Venda deve gerar lançamento de CMV com VL_CUSTO_CENTS > 0 na spec 04.")
-    builder.add_entry(headers, postings, links, event, ((debit_account, "D", amount), (_account("receita_vendas"), "C", amount)), 1, event["HIST"])
-    builder.add_entry(headers, postings, links, event, ((_account("cmv"), "D", cost), (_account("estoques"), "C", cost)), 2, f"CMV - {event['HIST']}")
+    builder.add_entry(headers, postings, links, event, ((debit_account, "D", amount), (builder.account("receita_vendas"), "C", amount)), 1, event["HIST"])
+    builder.add_entry(headers, postings, links, event, ((builder.account("cmv"), "D", cost), (builder.account("estoques"), "C", cost)), 2, f"CMV - {event['HIST']}")
 
 
 def _post_customer_receipt(event: pd.Series, builder: _PostingBuilder, headers: list[dict[str, object]], postings: list[dict[str, object]], links: list[dict[str, object]]) -> None:
     amount = event["VL_EVENTO_CENTS"]
-    builder.add_entry(headers, postings, links, event, ((_financial_account(event), "D", amount), (_account("clientes"), "C", amount)), 1, event["HIST"])
+    builder.add_entry(headers, postings, links, event, ((_financial_account(event, builder), "D", amount), (builder.account("clientes"), "C", amount)), 1, event["HIST"])
 
 
 def _post_operating_expense_cash(event: pd.Series, builder: _PostingBuilder, headers: list[dict[str, object]], postings: list[dict[str, object]], links: list[dict[str, object]]) -> None:
     amount = event["VL_EVENTO_CENTS"]
     expense_key = EXPENSE_CATEGORY_ACCOUNT_KEYS[event["CATEGORIA_DESPESA"]]
-    builder.add_entry(headers, postings, links, event, ((_account(expense_key), "D", amount), (_financial_account(event), "C", amount)), 1, event["HIST"])
+    builder.add_entry(headers, postings, links, event, ((builder.account(expense_key), "D", amount), (_financial_account(event, builder), "C", amount)), 1, event["HIST"])
 
 
 def _post_depreciation(event: pd.Series, builder: _PostingBuilder, headers: list[dict[str, object]], postings: list[dict[str, object]], links: list[dict[str, object]]) -> None:
     amount = event["VL_EVENTO_CENTS"]
-    builder.add_entry(headers, postings, links, event, ((_account("despesa_depreciacao"), "D", amount), (_account("depreciacao_acumulada"), "C", amount)), 1, event["HIST"])
+    builder.add_entry(headers, postings, links, event, ((builder.account("despesa_depreciacao"), "D", amount), (builder.account("depreciacao_acumulada"), "C", amount)), 1, event["HIST"])
 
 
-def _financial_account(event: pd.Series) -> str:
-    return _account(event["MEIO_FINANCEIRO"])
-
-
-def _account(key: str) -> str:
-    return ACCOUNT_CODE_MAP[key]
-
-
-def _validate_account_mapping(chart_of_accounts: pd.DataFrame) -> None:
-    active_analytic_codes = set(get_analytic_accounts(chart_of_accounts, active_only=True)["COD_CTA"])
-    for account_key, account_code in ACCOUNT_CODE_MAP.items():
-        if account_code not in active_analytic_codes:
-            raise ReferentialIntegrityError(
-                f"Mapeamento '{account_key}' referencia conta inexistente, inativa ou não analítica: {account_code}."
-            )
+def _financial_account(event: pd.Series, builder: _PostingBuilder) -> str:
+    return builder.account(event["MEIO_FINANCEIRO"])
 
 
 def _validate_columns(df: pd.DataFrame, columns: tuple[str, ...], issue_code: str) -> tuple[ValidationIssue, ...]:

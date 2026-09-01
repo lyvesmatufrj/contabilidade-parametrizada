@@ -9,6 +9,7 @@ description = "MVP contábil parametrizado conforme specs 00-02."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "openpyxl>=3.1",
     "pandas>=2.2",
 ]
 

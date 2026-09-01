@@ -1,11 +1,20 @@
 """MVP contábil parametrizado."""
 
+from accounting_sim.account_mapping import (
+    DEFAULT_ACCOUNT_ROLE_MAP,
+    OPTIONAL_ACCOUNT_ROLES,
+    REQUIRED_ACCOUNT_ROLES,
+    account_role_map_as_dict,
+    build_default_account_role_mapping,
+    validate_account_role_mapping,
+)
 from accounting_sim.canonical import (
     AccountNature,
     AccountType,
     AccountingInvariantError,
     AccountingPeriod,
     AccountingSimError,
+    ACCOUNT_ROLE_MAPPING_COLUMNS,
     CHART_OF_ACCOUNTS_COLUMNS,
     DebitCredit,
     EVENT_COLUMNS,
@@ -30,6 +39,14 @@ from accounting_sim.canonical import (
     amount_reais_to_cents,
     parse_iso_date,
 )
+from accounting_sim.workbook import (
+    WORKBOOK_SHEETS,
+    WORKBOOK_SPEC_VERSION,
+    WorkbookInputs,
+    build_workbook,
+    load_workbook_inputs,
+    regenerate_workbook,
+)
 
 __all__ = [
     "AccountNature",
@@ -37,8 +54,13 @@ __all__ = [
     "AccountingInvariantError",
     "AccountingPeriod",
     "AccountingSimError",
+    "ACCOUNT_ROLE_MAPPING_COLUMNS",
+    "account_role_map_as_dict",
+    "build_default_account_role_mapping",
+    "build_workbook",
     "CHART_OF_ACCOUNTS_COLUMNS",
     "DebitCredit",
+    "DEFAULT_ACCOUNT_ROLE_MAP",
     "EVENT_COLUMNS",
     "EVENT_ENTRY_LINK_COLUMNS",
     "EventClass",
@@ -50,6 +72,7 @@ __all__ = [
     "JournalEntryType",
     "LEDGER_VIEW_COLUMNS",
     "Origin",
+    "OPTIONAL_ACCOUNT_ROLES",
     "PaymentTerm",
     "POSTING_COLUMNS",
     "ReferentialIntegrityError",
@@ -58,6 +81,13 @@ __all__ = [
     "TRIAL_BALANCE_COLUMNS",
     "ValidationIssue",
     "ValidationReport",
+    "validate_account_role_mapping",
     "amount_reais_to_cents",
+    "load_workbook_inputs",
     "parse_iso_date",
+    "regenerate_workbook",
+    "REQUIRED_ACCOUNT_ROLES",
+    "WorkbookInputs",
+    "WORKBOOK_SHEETS",
+    "WORKBOOK_SPEC_VERSION",
 ]

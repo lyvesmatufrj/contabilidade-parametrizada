@@ -18,11 +18,11 @@ from accounting_sim.canonical import (
     JournalEntryType,
     Origin,
     PaymentTerm,
-    ReferentialIntegrityError,
     SimulationConfig,
 )
 from accounting_sim.chart_of_accounts import build_default_commercial_chart
 from accounting_sim.events import EVENT_SPEC_VERSION, build_demo_events
+from accounting_sim.account_mapping import build_default_account_role_mapping
 from accounting_sim.posting import ACCOUNT_CODE_MAP, post_events, validate_posting_result
 
 
@@ -40,6 +40,12 @@ CONFIG = SimulationConfig(
 
 def chart() -> pd.DataFrame:
     return build_default_commercial_chart(PERIOD.start_date)
+
+
+def mapping_with(role: str, account_code: str) -> pd.DataFrame:
+    mapping = build_default_account_role_mapping()
+    mapping.loc[mapping["PAPEL_CONTABIL"] == role, "COD_CTA"] = account_code
+    return mapping
 
 
 def one_event(event_type: EventType, amount: int = 100000, cost: int | None = None, medium: str | None = "caixa", category: str | None = None) -> pd.DataFrame:
@@ -172,15 +178,23 @@ def test_only_active_analytic_accounts_are_used():
 
 
 def test_missing_mapped_account_raises_clear_error():
-    bad_chart = chart()[chart()["COD_CTA"] != ACCOUNT_CODE_MAP["caixa"]]
-    with pytest.raises(ReferentialIntegrityError, match="caixa"):
-        post_events(one_event(EventType.CAPITAL_CONTRIBUTION), bad_chart, CONFIG)
+    with pytest.raises(AccountingInvariantError, match="mapped_account_missing"):
+        post_events(
+            one_event(EventType.CAPITAL_CONTRIBUTION),
+            chart(),
+            CONFIG,
+            account_role_mapping=mapping_with("caixa", "9.9.99"),
+        )
 
 
-def test_synthetic_account_in_mapping_raises_clear_error(monkeypatch):
-    monkeypatch.setitem(ACCOUNT_CODE_MAP, "caixa", "1.1.01")
-    with pytest.raises(ReferentialIntegrityError, match="caixa"):
-        post_events(one_event(EventType.CAPITAL_CONTRIBUTION), chart(), CONFIG)
+def test_synthetic_account_in_mapping_raises_clear_error():
+    with pytest.raises(AccountingInvariantError, match="mapped_account_not_analytic"):
+        post_events(
+            one_event(EventType.CAPITAL_CONTRIBUTION),
+            chart(),
+            CONFIG,
+            account_role_mapping=mapping_with("caixa", "1.1.01"),
+        )
 
 
 def test_ids_are_unique_and_deterministic():
