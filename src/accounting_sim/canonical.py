@@ -148,6 +148,12 @@ ACCOUNT_ROLE_MAPPING_COLUMNS: tuple[str, ...] = (
     "COD_CTA",
 )
 
+STATEMENT_MAPPING_COLUMNS: tuple[str, ...] = (
+    "COD_CTA",
+    "DEMONSTRACAO",
+    "COD_LINHA",
+)
+
 JOURNAL_ENTRY_HEADER_COLUMNS: tuple[str, ...] = (
     "NUM_LCTO",
     "DT_LCTO",
@@ -218,6 +224,27 @@ TRIAL_BALANCE_COLUMNS: tuple[str, ...] = (
     "VL_CRED_CENTS",
     "VL_SLD_FIN_CENTS",
     "IND_DC_FIN",
+)
+
+BALANCE_SHEET_COLUMNS: tuple[str, ...] = (
+    "DT_REF",
+    "ORDEM",
+    "COD_LINHA",
+    "NIVEL",
+    "TIPO_LINHA",
+    "LINHA",
+    "VL_CENTS",
+)
+
+INCOME_STATEMENT_COLUMNS: tuple[str, ...] = (
+    "DT_INI",
+    "DT_FIN",
+    "ORDEM",
+    "COD_LINHA",
+    "NIVEL",
+    "TIPO_LINHA",
+    "LINHA",
+    "VL_CENTS",
 )
 
 ACCOUNT_NATURE_LABELS: Mapping[str, str] = MappingProxyType(

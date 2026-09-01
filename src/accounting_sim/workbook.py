@@ -1,4 +1,4 @@
-"""Materialização Excel do núcleo contábil validado pela spec 06."""
+"""Materialização Excel do núcleo contábil validado até a spec 07."""
 
 from __future__ import annotations
 
@@ -19,13 +19,16 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 from accounting_sim.account_mapping import validate_account_role_mapping
 from accounting_sim.canonical import (
     ACCOUNT_ROLE_MAPPING_COLUMNS,
+    BALANCE_SHEET_COLUMNS,
     CHART_OF_ACCOUNTS_COLUMNS,
     EVENT_COLUMNS,
     EVENT_ENTRY_LINK_COLUMNS,
+    INCOME_STATEMENT_COLUMNS,
     JOURNAL_ENTRY_HEADER_COLUMNS,
     JOURNAL_VIEW_COLUMNS,
     LEDGER_VIEW_COLUMNS,
     POSTING_COLUMNS,
+    STATEMENT_MAPPING_COLUMNS,
     TRIAL_BALANCE_COLUMNS,
     AccountingInvariantError,
     AccountingPeriod,
@@ -51,9 +54,17 @@ from accounting_sim.ledger import (
     validate_ledger_trial_balance,
 )
 from accounting_sim.posting import post_events, validate_posting_result
+from accounting_sim.statements import (
+    FINANCIAL_STATEMENT_SPEC_VERSION,
+    build_default_statement_mapping,
+    build_financial_statements,
+    synchronize_chart_statement_codes,
+    validate_financial_statements,
+    validate_statement_mapping,
+)
 
 
-WORKBOOK_SPEC_VERSION = "spec_06_excel_workbook_v1"
+WORKBOOK_SPEC_VERSION = "spec_07_excel_workbook_v1"
 
 WORKBOOK_SHEETS: tuple[str, ...] = (
     "README",
@@ -67,11 +78,14 @@ WORKBOOK_SHEETS: tuple[str, ...] = (
     "DIARIO",
     "RAZAO",
     "BALANCETE",
+    "MAPEAMENTO_DF",
+    "BP",
+    "DRE",
     "VALIDACOES",
     "PROVENIENCIA",
 )
 
-EDITABLE_SHEETS = frozenset({"CONFIG", "PLANO_CONTAS", "MAPEAMENTO_CONTAS", "EVENTOS"})
+EDITABLE_SHEETS = frozenset({"CONFIG", "PLANO_CONTAS", "MAPEAMENTO_CONTAS", "EVENTOS", "MAPEAMENTO_DF"})
 
 CONFIG_COLUMNS: tuple[str, ...] = ("CHAVE", "VALOR")
 VALIDATION_COLUMNS: tuple[str, ...] = (
@@ -165,6 +179,25 @@ TRIAL_BALANCE_WORKBOOK_COLUMNS: tuple[str, ...] = (
     "VL_SLD_FIN",
     "IND_DC_FIN",
 )
+BALANCE_SHEET_WORKBOOK_COLUMNS: tuple[str, ...] = (
+    "DT_REF",
+    "ORDEM",
+    "COD_LINHA",
+    "NIVEL",
+    "TIPO_LINHA",
+    "LINHA",
+    "VL",
+)
+INCOME_STATEMENT_WORKBOOK_COLUMNS: tuple[str, ...] = (
+    "DT_INI",
+    "DT_FIN",
+    "ORDEM",
+    "COD_LINHA",
+    "NIVEL",
+    "TIPO_LINHA",
+    "LINHA",
+    "VL",
+)
 
 TABLE_NAMES: Mapping[str, str] = {
     "CONFIG": "tbl_CONFIG",
@@ -177,6 +210,9 @@ TABLE_NAMES: Mapping[str, str] = {
     "DIARIO": "tbl_DIARIO",
     "RAZAO": "tbl_RAZAO",
     "BALANCETE": "tbl_BALANCETE",
+    "MAPEAMENTO_DF": "tbl_MAPEAMENTO_DF",
+    "BP": "tbl_BP",
+    "DRE": "tbl_DRE",
     "VALIDACOES": "tbl_VALIDACOES",
     "PROVENIENCIA": "tbl_PROVENIENCIA",
 }
@@ -188,6 +224,7 @@ class WorkbookInputs:
     chart_of_accounts: pd.DataFrame
     account_role_mapping: pd.DataFrame
     events: pd.DataFrame
+    statement_mapping: pd.DataFrame | None = None
 
 
 def build_workbook(
@@ -198,15 +235,23 @@ def build_workbook(
 ) -> Path:
     simulation_config = inputs.simulation_config
     period = AccountingPeriod(simulation_config.start_date, simulation_config.end_date)
-    chart_of_accounts = inputs.chart_of_accounts.copy(deep=True)
+    raw_chart_of_accounts = inputs.chart_of_accounts.copy(deep=True)
     account_role_mapping = inputs.account_role_mapping.copy(deep=True)
+    statement_mapping = (
+        build_default_statement_mapping(raw_chart_of_accounts)
+        if inputs.statement_mapping is None
+        else inputs.statement_mapping.copy(deep=True)
+    )
+    chart_of_accounts = synchronize_chart_statement_codes(raw_chart_of_accounts, statement_mapping)
     events = sort_events(normalize_events(inputs.events.copy(deep=True)))
 
     chart_report = validate_chart_of_accounts(chart_of_accounts)
     mapping_report = validate_account_role_mapping(account_role_mapping, chart_of_accounts)
+    statement_mapping_report = validate_statement_mapping(statement_mapping, chart_of_accounts)
     event_report = validate_events(events, period)
     _raise_if_invalid("PLANO_CONTAS", chart_report)
     _raise_if_invalid("MAPEAMENTO_CONTAS", mapping_report)
+    _raise_if_invalid("MAPEAMENTO_DF", statement_mapping_report)
     _raise_if_invalid("EVENTOS", event_report)
 
     posting_result = post_events(
@@ -224,14 +269,19 @@ def build_workbook(
     trial_balance = build_trial_balance(ledger, chart_of_accounts, period)
     ledger_report = validate_ledger_trial_balance(posting_result.postings, ledger, trial_balance, chart_of_accounts, period)
     _raise_if_invalid("RAZAO_BALANCETE", ledger_report)
+    financial_statements = build_financial_statements(trial_balance, chart_of_accounts, statement_mapping, period)
+    statements_report = validate_financial_statements(financial_statements, trial_balance, chart_of_accounts, statement_mapping, period)
+    _raise_if_invalid("DEMONSTRACOES", statements_report)
 
     validations = _build_validations(
         {
             "PLANO_CONTAS": chart_report,
             "MAPEAMENTO_CONTAS": mapping_report,
+            "MAPEAMENTO_DF": statement_mapping_report,
             "EVENTOS": event_report,
             "LANCAMENTOS_PARTIDAS": posting_report,
             "RAZAO_BALANCETE": ledger_report,
+            "DEMONSTRACOES": statements_report,
         }
     )
     provenance = _build_provenance(simulation_config, events, rule_version)
@@ -249,6 +299,9 @@ def build_workbook(
     _write_table(wb, "DIARIO", _journal_to_workbook(journal))
     _write_table(wb, "RAZAO", _ledger_to_workbook(ledger))
     _write_table(wb, "BALANCETE", _trial_balance_to_workbook(trial_balance))
+    _write_table(wb, "MAPEAMENTO_DF", _serialize_frame(statement_mapping, STATEMENT_MAPPING_COLUMNS))
+    _write_table(wb, "BP", _balance_sheet_to_workbook(financial_statements.balance_sheet))
+    _write_table(wb, "DRE", _income_statement_to_workbook(financial_statements.income_statement))
     _write_table(wb, "VALIDACOES", validations)
     _write_table(wb, "PROVENIENCIA", provenance)
     _apply_editable_validations(wb)
@@ -272,7 +325,8 @@ def load_workbook_inputs(path: str | Path) -> WorkbookInputs:
     chart_of_accounts = _frame_to_chart(_read_table_frame(wb["PLANO_CONTAS"], CHART_OF_ACCOUNTS_COLUMNS))
     account_role_mapping = _read_table_frame(wb["MAPEAMENTO_CONTAS"], ACCOUNT_ROLE_MAPPING_COLUMNS)
     events = _frame_to_events(_read_table_frame(wb["EVENTOS"], EVENT_WORKBOOK_COLUMNS))
-    return WorkbookInputs(config, chart_of_accounts, account_role_mapping, events)
+    statement_mapping = _read_table_frame(wb["MAPEAMENTO_DF"], STATEMENT_MAPPING_COLUMNS)
+    return WorkbookInputs(config, chart_of_accounts, account_role_mapping, events, statement_mapping)
 
 
 def regenerate_workbook(
@@ -385,10 +439,12 @@ def _build_provenance(config: SimulationConfig, events: pd.DataFrame, rule_versi
     event_versions = sorted({str(value) for value in events["SPEC_VERSION"].dropna()})
     rows = [
         ("workbook_spec_version", WORKBOOK_SPEC_VERSION),
+        ("financial_statement_spec_version", FINANCIAL_STATEMENT_SPEC_VERSION),
         ("simulation_id", config.simulation_id),
         ("scenario_name", config.scenario_name),
         ("simulation_spec_version", config.spec_version),
         ("posting_rule_version", rule_version),
+        ("statement_mapping_source", "MAPEAMENTO_DF"),
         ("currency", config.currency),
         ("chart_source", "template_or_input_PLANO_CONTAS"),
         ("event_spec_versions", ",".join(event_versions)),
@@ -442,6 +498,14 @@ def _trial_balance_to_workbook(trial_balance: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+def _balance_sheet_to_workbook(balance_sheet: pd.DataFrame) -> pd.DataFrame:
+    return _replace_money_columns(balance_sheet, {"VL_CENTS": "VL"}, BALANCE_SHEET_WORKBOOK_COLUMNS)
+
+
+def _income_statement_to_workbook(income_statement: pd.DataFrame) -> pd.DataFrame:
+    return _replace_money_columns(income_statement, {"VL_CENTS": "VL"}, INCOME_STATEMENT_WORKBOOK_COLUMNS)
+
+
 def _replace_money_columns(
     frame: pd.DataFrame,
     replacements: Mapping[str, str],
@@ -467,8 +531,9 @@ def _write_readme(wb: Workbook) -> None:
     rows = [
         ("Workbook contábil parametrizado", None),
         ("Versão", WORKBOOK_SPEC_VERSION),
-        ("Regra operacional", "Editar somente CONFIG, PLANO_CONTAS, MAPEAMENTO_CONTAS e EVENTOS; regenerar pelo Python."),
-        ("Derivadas", "LANCAMENTOS, PARTIDAS, VINCULO_EVENTO_LCTO, DIARIO, RAZAO, BALANCETE, VALIDACOES e PROVENIENCIA."),
+        ("Regra operacional", "Editar somente CONFIG, PLANO_CONTAS, MAPEAMENTO_CONTAS, EVENTOS e MAPEAMENTO_DF; regenerar pelo Python."),
+        ("COD_DF", "PLANO_CONTAS.COD_DF é espelho denormalizado de MAPEAMENTO_DF e é sobrescrito na regeneração."),
+        ("Derivadas", "LANCAMENTOS, PARTIDAS, VINCULO_EVENTO_LCTO, DIARIO, RAZAO, BALANCETE, BP, DRE, VALIDACOES e PROVENIENCIA."),
         ("Fonte de verdade", "Objetos derivados são reconstruídos a partir das abas de entrada."),
     ]
     for row_number, values in enumerate(rows, start=1):
@@ -520,8 +585,9 @@ def _format_columns(ws, columns: list[str]) -> None:
         "VL_DEB",
         "VL_CRED",
         "VL_SLD_FIN",
+        "VL",
     }
-    date_columns = {"DT_ALT", "DT_EVENTO", "DT_LCTO", "DT_LCTO_EXT", "DT_INI", "DT_FIN"}
+    date_columns = {"DT_ALT", "DT_EVENTO", "DT_LCTO", "DT_LCTO_EXT", "DT_INI", "DT_FIN", "DT_REF"}
     for column_index, column_name in enumerate(columns, start=1):
         number_format = None
         if column_name in money_columns:
@@ -540,7 +606,7 @@ def _set_column_widths(ws, columns: list[str]) -> None:
         width = min(max(len(column_name) + 2, 12), 34)
         if column_name in {"HIST", "MENSAGEM"}:
             width = 42
-        if column_name in {"COD_CTA", "COD_CTA_SUP", "PAPEL_CONTABIL"}:
+        if column_name in {"COD_CTA", "COD_CTA_SUP", "PAPEL_CONTABIL", "COD_LINHA"}:
             width = 22
         ws.column_dimensions[get_column_letter(index)].width = width
 
@@ -560,6 +626,7 @@ def _apply_editable_validations(wb: Workbook) -> None:
     _add_list_validation(wb["EVENTOS"], "J", '"salarios,aluguel,utilidades,juros"', 2, 1000)
     _add_list_validation(wb["EVENTOS"], "L", f'"{",".join(item.value for item in PaymentTerm)}"', 2, 1000)
     _add_list_validation(wb["EVENTOS"], "O", f'"{",".join(item.value for item in Origin)}"', 2, 1000)
+    _add_list_validation(wb["MAPEAMENTO_DF"], "B", '"BP,DRE"', 2, 1000)
 
 
 def _add_list_validation(ws, column: str, formula: str, first_row: int, last_row: int) -> None:

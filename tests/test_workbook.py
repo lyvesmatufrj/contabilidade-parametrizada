@@ -14,6 +14,7 @@ from accounting_sim.canonical import (
     ACCOUNT_ROLE_MAPPING_COLUMNS,
     CHART_OF_ACCOUNTS_COLUMNS,
     EVENT_COLUMNS,
+    STATEMENT_MAPPING_COLUMNS,
     AccountingPeriod,
     DebitCredit,
     EventClass,
@@ -28,6 +29,11 @@ from accounting_sim.canonical import (
 from accounting_sim.chart_of_accounts import build_default_commercial_chart, validate_chart_of_accounts
 from accounting_sim.events import EVENT_SPEC_VERSION
 from accounting_sim.posting import post_events
+from accounting_sim.statements import (
+    FINANCIAL_STATEMENT_SPEC_VERSION,
+    build_default_statement_mapping,
+    validate_statement_mapping,
+)
 from accounting_sim.workbook import (
     EVENT_WORKBOOK_COLUMNS,
     TABLE_NAMES,
@@ -117,12 +123,15 @@ def workbook_inputs(
     chart_of_accounts: pd.DataFrame | None = None,
     account_role_mapping: pd.DataFrame | None = None,
     events: pd.DataFrame | None = None,
+    statement_mapping: pd.DataFrame | None = None,
 ) -> WorkbookInputs:
+    chart_df = chart() if chart_of_accounts is None else chart_of_accounts
     return WorkbookInputs(
         simulation_config=CONFIG,
-        chart_of_accounts=chart() if chart_of_accounts is None else chart_of_accounts,
+        chart_of_accounts=chart_df,
         account_role_mapping=build_default_account_role_mapping() if account_role_mapping is None else account_role_mapping,
         events=canonical_events() if events is None else events,
+        statement_mapping=build_default_statement_mapping(chart_df) if statement_mapping is None else statement_mapping,
     )
 
 
@@ -149,6 +158,10 @@ def row_by_code(frame: pd.DataFrame, code: str) -> pd.Series:
     return frame[frame["COD_CTA"] == code].iloc[0]
 
 
+def row_by_line(frame: pd.DataFrame, code: str) -> pd.Series:
+    return frame[frame["COD_LINHA"] == code].iloc[0]
+
+
 def test_openpyxl_is_available_as_dependency():
     assert importlib.util.find_spec("openpyxl") is not None
 
@@ -167,7 +180,7 @@ def test_workbook_sheets_are_exactly_in_canonical_order(tmp_path):
 
 def test_future_sheets_are_not_anticipated(tmp_path):
     _, wb = build_case(tmp_path)
-    forbidden = {"ENTIDADE", "CENTROS_CUSTO", "PARTICIPANTES", "HISTORICOS", "MAPEAMENTO_DF", "BP", "DRE", "DFC", "DVA", "CENARIOS"}
+    forbidden = {"ENTIDADE", "CENTROS_CUSTO", "PARTICIPANTES", "HISTORICOS", "DFC", "DVA", "CENARIOS"}
     assert forbidden.isdisjoint(set(wb.sheetnames))
     assert not any(name.startswith("FISCAL_") for name in wb.sheetnames)
 
@@ -185,8 +198,11 @@ def test_named_tables_exist_and_cover_expected_row_counts(tmp_path):
         "DIARIO": 10,
         "RAZAO": 10,
         "BALANCETE": len(chart()[chart()["IND_CTA"] == "A"]),
-        "VALIDACOES": 5,
-        "PROVENIENCIA": 8,
+        "MAPEAMENTO_DF": len(build_default_statement_mapping(chart())),
+        "BP": 22,
+        "DRE": 11,
+        "VALIDACOES": 7,
+        "PROVENIENCIA": 10,
     }
     for sheet_name, table_name in TABLE_NAMES.items():
         assert table_name in wb[sheet_name].tables
@@ -225,6 +241,15 @@ def test_mapping_round_trip_preserves_roles_and_codes(tmp_path):
     reloaded = load_workbook_inputs(path)
     assert tuple(reloaded.account_role_mapping.columns) == ACCOUNT_ROLE_MAPPING_COLUMNS
     assert_frame_equal(reloaded.account_role_mapping, build_default_account_role_mapping(), check_dtype=False)
+
+
+def test_statement_mapping_round_trip_preserves_accounts_and_lines(tmp_path):
+    path, _ = build_case(tmp_path)
+    reloaded = load_workbook_inputs(path)
+    expected = build_default_statement_mapping(chart())
+    assert tuple(reloaded.statement_mapping.columns) == STATEMENT_MAPPING_COLUMNS
+    assert_frame_equal(reloaded.statement_mapping, expected, check_dtype=False)
+    assert validate_statement_mapping(reloaded.statement_mapping, reloaded.chart_of_accounts).ok is True
 
 
 def test_events_round_trip_preserves_ids_dates_and_cents(tmp_path):
@@ -297,6 +322,37 @@ def test_trial_balance_presents_expected_debit_and_credit_balances_in_brl(tmp_pa
     assert credit_total == Decimal("150000.00")
 
 
+def test_income_statement_sheet_presents_canonical_result_in_brl(tmp_path):
+    path, _ = build_case(tmp_path)
+    dre = sheet_frame(path, "DRE")
+    assert decimal_value(row_by_line(dre, "DRE_RECEITA_VENDAS")["VL"]) == Decimal("50000.00")
+    assert decimal_value(row_by_line(dre, "DRE_CMV")["VL"]) == Decimal("-20000.00")
+    assert decimal_value(row_by_line(dre, "DRE_RESULTADO_BRUTO")["VL"]) == Decimal("30000.00")
+    assert decimal_value(row_by_line(dre, "DRE_RESULTADO_PERIODO")["VL"]) == Decimal("30000.00")
+
+
+def test_balance_sheet_sheet_presents_canonical_totals_in_brl(tmp_path):
+    path, _ = build_case(tmp_path)
+    bp = sheet_frame(path, "BP")
+    assert decimal_value(row_by_line(bp, "BP_ATIVO")["VL"]) == Decimal("130000.00")
+    assert decimal_value(row_by_line(bp, "BP_CAPITAL")["VL"]) == Decimal("100000.00")
+    assert decimal_value(row_by_line(bp, "BP_RESULTADO_PERIODO")["VL"]) == Decimal("30000.00")
+    assert decimal_value(row_by_line(bp, "BP_PATRIMONIO_LIQUIDO")["VL"]) == Decimal("130000.00")
+    assert decimal_value(row_by_line(bp, "BP_TOTAL_PASSIVO_PL")["VL"]) == Decimal("130000.00")
+
+
+def test_workbook_preserves_previous_core_invariants_after_adding_statements(tmp_path):
+    path, _ = build_case(tmp_path)
+    postings = sheet_frame(path, "PARTIDAS")
+    trial_balance = sheet_frame(path, "BALANCETE")
+    assert len(sheet_frame(path, "LANCAMENTOS")) == 5
+    assert len(postings) == 10
+    assert sum(decimal_value(value) for value in postings.loc[postings["IND_DC"] == "D", "VL_DC"]) == Decimal("230000.00")
+    assert sum(decimal_value(value) for value in postings.loc[postings["IND_DC"] == "C", "VL_DC"]) == Decimal("230000.00")
+    assert sum(decimal_value(value) for value in trial_balance.loc[trial_balance["IND_DC_FIN"] == "D", "VL_SLD_FIN"]) == Decimal("150000.00")
+    assert sum(decimal_value(value) for value in trial_balance.loc[trial_balance["IND_DC_FIN"] == "C", "VL_SLD_FIN"]) == Decimal("150000.00")
+
+
 def test_validations_sheet_has_no_failures_for_canonical_case(tmp_path):
     path, _ = build_case(tmp_path)
     validations = sheet_frame(path, "VALIDACOES")
@@ -308,7 +364,9 @@ def test_provenance_contains_spec_and_rule_versions(tmp_path):
     path, _ = build_case(tmp_path)
     provenance = sheet_frame(path, "PROVENIENCIA").set_index("CHAVE")["VALOR"].to_dict()
     assert provenance["workbook_spec_version"] == WORKBOOK_SPEC_VERSION
+    assert provenance["financial_statement_spec_version"] == FINANCIAL_STATEMENT_SPEC_VERSION
     assert provenance["posting_rule_version"] == "posting_rules_v1"
+    assert provenance["statement_mapping_source"] == "MAPEAMENTO_DF"
     assert provenance["simulation_id"] == CONFIG.simulation_id
 
 
@@ -350,6 +408,44 @@ def test_manual_ledger_edit_is_ignored_by_regeneration(tmp_path):
     assert decimal_value(caixa_final["SALDO_ABS"]) == Decimal("100000.00")
 
 
+def test_manual_balance_sheet_edit_is_ignored_by_regeneration(tmp_path):
+    path, _ = build_case(tmp_path)
+    wb = load_workbook(path)
+    ws = wb["BP"]
+    headers = [cell.value for cell in ws[1]]
+    value_col = headers.index("VL") + 1
+    line_col = headers.index("COD_LINHA") + 1
+    for row in range(2, ws.max_row + 1):
+        if ws.cell(row=row, column=line_col).value == "BP_ATIVO":
+            ws.cell(row=row, column=value_col, value=999999.99)
+            break
+    wb.save(path)
+
+    regenerated = tmp_path / "regenerated_bp.xlsx"
+    regenerate_workbook(path, regenerated)
+    bp = sheet_frame(regenerated, "BP")
+    assert decimal_value(row_by_line(bp, "BP_ATIVO")["VL"]) == Decimal("130000.00")
+
+
+def test_manual_income_statement_edit_is_ignored_by_regeneration(tmp_path):
+    path, _ = build_case(tmp_path)
+    wb = load_workbook(path)
+    ws = wb["DRE"]
+    headers = [cell.value for cell in ws[1]]
+    value_col = headers.index("VL") + 1
+    line_col = headers.index("COD_LINHA") + 1
+    for row in range(2, ws.max_row + 1):
+        if ws.cell(row=row, column=line_col).value == "DRE_RESULTADO_PERIODO":
+            ws.cell(row=row, column=value_col, value=999999.99)
+            break
+    wb.save(path)
+
+    regenerated = tmp_path / "regenerated_dre.xlsx"
+    regenerate_workbook(path, regenerated)
+    dre = sheet_frame(regenerated, "DRE")
+    assert decimal_value(row_by_line(dre, "DRE_RESULTADO_PERIODO")["VL"]) == Decimal("30000.00")
+
+
 def test_cash_recoding_in_workbook_inputs_flows_to_postings(tmp_path):
     chart_df = chart().copy()
     chart_df.loc[chart_df["COD_CTA"] == DEFAULT_ACCOUNT_ROLE_MAP["caixa"], "COD_CTA"] = "1.01.001.0001"
@@ -358,6 +454,29 @@ def test_cash_recoding_in_workbook_inputs_flows_to_postings(tmp_path):
     path, _ = build_case(tmp_path, workbook_inputs(chart_of_accounts=chart_df, account_role_mapping=account_mapping))
     postings = sheet_frame(path, "PARTIDAS")
     assert "1.01.001.0001" in set(postings["COD_CTA"])
+
+
+def test_changing_statement_mapping_changes_presentation_not_postings(tmp_path):
+    statement_mapping = build_default_statement_mapping(chart())
+    statement_mapping.loc[statement_mapping["COD_CTA"] == "1.1.01.01", "COD_LINHA"] = "BP_BANCOS"
+    path, _ = build_case(tmp_path, workbook_inputs(statement_mapping=statement_mapping))
+    bp = sheet_frame(path, "BP")
+    postings = sheet_frame(path, "PARTIDAS")
+    assert decimal_value(row_by_line(bp, "BP_CAIXA")["VL"]) == Decimal("0.00")
+    assert decimal_value(row_by_line(bp, "BP_BANCOS")["VL"]) == Decimal("100000.00")
+    assert "1.1.01.01" in set(postings["COD_CTA"])
+
+
+def test_changing_only_cod_df_is_ignored_and_overwritten_by_statement_mapping(tmp_path):
+    chart_df = chart()
+    chart_df.loc[chart_df["COD_CTA"] == "1.1.01.01", "COD_DF"] = "BP_BANCOS"
+    statement_mapping = build_default_statement_mapping(chart())
+    path, _ = build_case(tmp_path, workbook_inputs(chart_of_accounts=chart_df, statement_mapping=statement_mapping))
+    bp = sheet_frame(path, "BP")
+    chart_sheet = sheet_frame(path, "PLANO_CONTAS")
+    assert decimal_value(row_by_line(bp, "BP_CAIXA")["VL"]) == Decimal("100000.00")
+    assert decimal_value(row_by_line(bp, "BP_BANCOS")["VL"]) == Decimal("0.00")
+    assert row_by_code(chart_sheet, "1.1.01.01")["COD_DF"] == "BP_CAIXA"
 
 
 def test_same_input_generates_same_values_after_two_materializations(tmp_path):
