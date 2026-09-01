@@ -2,7 +2,9 @@
 
 MVP simples do sistema contábil parametrizado.
 
-O contrato de implementação desta fase está em [`specs/README_specs_plan.md`](specs/README_specs_plan.md), com o Marco A implementado até a Spec 07:
+O contrato de implementação desta fase está em
+[`specs/README_specs_plan.md`](specs/README_specs_plan.md),
+com o Marco A implementado nas specs 00–05 e o Marco B implementado nas specs 06–07:
 
 - scaffold do projeto;
 - convenções canônicas de nomes e tipos;
