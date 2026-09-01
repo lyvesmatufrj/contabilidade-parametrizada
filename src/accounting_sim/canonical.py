@@ -1,4 +1,4 @@
-"""Vocabulário canônico e helpers primitivos das specs 00-02."""
+"""Vocabulário canônico e helpers primitivos do MVP contábil."""
 
 from __future__ import annotations
 
@@ -36,6 +36,48 @@ class Origin(StrEnum):
     ADJUSTED = "ajustada"
 
 
+class EventClass(StrEnum):
+    TRANSACTION = "TR"
+    ADJUSTMENT = "ADJ"
+
+
+class EventDirection(StrEnum):
+    IN = "in"
+    OUT = "out"
+    NA = "na"
+
+
+class EventNature(StrEnum):
+    GOOD = "bem"
+    SERVICE = "servico"
+    FINANCIAL = "financeiro"
+    ADJUSTMENT = "ajuste"
+
+
+class PaymentTerm(StrEnum):
+    CASH = "vista"
+    CREDIT = "prazo"
+    NA = "na"
+
+
+class EventType(StrEnum):
+    CAPITAL_CONTRIBUTION = "aporte_capital"
+    PURCHASE_CASH = "compra_mercadoria_a_vista"
+    PURCHASE_CREDIT = "compra_mercadoria_a_prazo"
+    SUPPLIER_PAYMENT = "pagamento_fornecedor"
+    SALE_CASH = "venda_a_vista"
+    SALE_CREDIT = "venda_a_prazo"
+    CUSTOMER_RECEIPT = "recebimento_cliente"
+    OPERATING_EXPENSE_CASH = "despesa_operacional_a_vista"
+    DEPRECIATION = "depreciacao"
+
+
+class JournalEntryType(StrEnum):
+    NORMAL = "N"
+    CLOSING = "E"
+    EXTEMPORANEOUS = "X"
+
+
 class AccountingSimError(Exception):
     """Erro-base do MVP contábil."""
 
@@ -52,6 +94,22 @@ class AccountingInvariantError(AccountingSimError):
     """Erro de invariante contábil."""
 
 
+@dataclass(frozen=True)
+class ValidationIssue:
+    code: str
+    message: str
+    account_code: str | None = None
+    event_id: str | None = None
+    entry_id: str | None = None
+    posting_id: str | None = None
+
+
+@dataclass(frozen=True)
+class ValidationReport:
+    ok: bool
+    issues: tuple[ValidationIssue, ...]
+
+
 CHART_OF_ACCOUNTS_COLUMNS: tuple[str, ...] = (
     "DT_ALT",
     "COD_NAT",
@@ -64,6 +122,97 @@ CHART_OF_ACCOUNTS_COLUMNS: tuple[str, ...] = (
     "COD_DF",
     "ATIVA",
     "ORIGEM",
+)
+
+EVENT_COLUMNS: tuple[str, ...] = (
+    "ID_EVENTO",
+    "DT_EVENTO",
+    "CLASSE_EVENTO",
+    "TIPO_EVENTO",
+    "DIRECAO",
+    "NATUREZA",
+    "VL_EVENTO_CENTS",
+    "VL_CUSTO_CENTS",
+    "MEIO_FINANCEIRO",
+    "CATEGORIA_DESPESA",
+    "COD_PART",
+    "COND_PAGTO",
+    "DOC_REF",
+    "HIST",
+    "ORIGEM",
+    "SPEC_VERSION",
+)
+
+JOURNAL_ENTRY_HEADER_COLUMNS: tuple[str, ...] = (
+    "NUM_LCTO",
+    "DT_LCTO",
+    "VL_LCTO_CENTS",
+    "IND_LCTO",
+    "DT_LCTO_EXT",
+    "ID_GERACAO",
+    "VERSAO_REGRA",
+)
+
+POSTING_COLUMNS: tuple[str, ...] = (
+    "ID_PARTIDA",
+    "NUM_LCTO",
+    "COD_CTA",
+    "COD_CCUS",
+    "VL_DC_CENTS",
+    "IND_DC",
+    "NUM_ARQ",
+    "COD_HIST_PAD",
+    "HIST",
+    "COD_PART",
+    "ID_ORIGEM",
+)
+
+EVENT_ENTRY_LINK_COLUMNS: tuple[str, ...] = (
+    "ID_EVENTO",
+    "NUM_LCTO",
+    "ORDEM_LCTO_EVENTO",
+)
+
+JOURNAL_VIEW_COLUMNS: tuple[str, ...] = (
+    "DT_LCTO",
+    "NUM_LCTO",
+    "ID_PARTIDA",
+    "COD_CTA",
+    "CTA",
+    "IND_DC",
+    "VL_DC_CENTS",
+    "HIST",
+    "COD_PART",
+    "ID_ORIGEM",
+)
+
+LEDGER_VIEW_COLUMNS: tuple[str, ...] = (
+    "COD_CTA",
+    "CTA",
+    "DT_LCTO",
+    "NUM_LCTO",
+    "ID_PARTIDA",
+    "DEBITO_CENTS",
+    "CREDITO_CENTS",
+    "MOVIMENTO_ASSINADO_CENTS",
+    "SALDO_ASSINADO_CENTS",
+    "SALDO_ABS_CENTS",
+    "IND_DC_SALDO",
+    "HIST",
+    "ID_ORIGEM",
+)
+
+TRIAL_BALANCE_COLUMNS: tuple[str, ...] = (
+    "DT_INI",
+    "DT_FIN",
+    "COD_CTA",
+    "COD_CCUS",
+    "VL_SLD_INI_CENTS",
+    "IND_DC_INI",
+    "VL_DEB_CENTS",
+    "VL_CRED_CENTS",
+    "VL_SLD_FIN_CENTS",
+    "IND_DC_FIN",
 )
 
 ACCOUNT_NATURE_LABELS: Mapping[str, str] = MappingProxyType(

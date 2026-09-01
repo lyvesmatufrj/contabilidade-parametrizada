@@ -1,8 +1,7 @@
-"""Plano de contas canônico das specs 00-02."""
+"""Plano de contas canônico do MVP contábil."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Iterable
@@ -17,6 +16,8 @@ from accounting_sim.canonical import (
     Origin,
     ReferentialIntegrityError,
     SchemaValidationError,
+    ValidationIssue,
+    ValidationReport,
     parse_iso_date,
 )
 
@@ -27,19 +28,6 @@ DEFAULT_COMMERCIAL_CHART_PATH = (
     / "templates"
     / "chart_of_accounts_commercial.csv"
 )
-
-
-@dataclass(frozen=True)
-class ValidationIssue:
-    code: str
-    message: str
-    account_code: str | None = None
-
-
-@dataclass(frozen=True)
-class ValidationReport:
-    ok: bool
-    issues: tuple[ValidationIssue, ...]
 
 
 def load_chart_of_accounts(path: str | Path) -> pd.DataFrame:
@@ -262,11 +250,14 @@ def _sort_chart(df: pd.DataFrame) -> pd.DataFrame:
     return sorted_df.reset_index(drop=True)
 
 
-def _account_code_sort_key(code: str) -> tuple[tuple[int, int | str], ...]:
+def account_code_sort_key(code: str) -> tuple[tuple[int, int | str], ...]:
     parts: list[tuple[int, int | str]] = []
     for part in str(code).split("."):
         parts.append((0, int(part)) if part.isdigit() else (1, part))
     return tuple(parts)
+
+
+_account_code_sort_key = account_code_sort_key
 
 
 def _clean_required_string(value: object) -> str:

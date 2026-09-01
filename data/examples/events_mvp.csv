@@ -1,0 +1,9 @@
+ID_EVENTO,DT_EVENTO,CLASSE_EVENTO,TIPO_EVENTO,DIRECAO,NATUREZA,VL_EVENTO_CENTS,VL_CUSTO_CENTS,MEIO_FINANCEIRO,CATEGORIA_DESPESA,COD_PART,COND_PAGTO,DOC_REF,HIST,ORIGEM,SPEC_VERSION
+E001,2026-01-01,TR,aporte_capital,in,financeiro,10000000,,caixa,,,na,,Integralização de capital em caixa,sintética,spec_03_events_v1
+E002,2026-01-02,TR,compra_mercadoria_a_prazo,in,bem,3000000,,,,FORN001,prazo,DOC-COMPRA-001,Compra de mercadorias a prazo,sintética,spec_03_events_v1
+E003,2026-01-03,TR,pagamento_fornecedor,out,financeiro,1000000,,caixa,,FORN001,na,DOC-PAG-001,Pagamento parcial de fornecedor,sintética,spec_03_events_v1
+E004,2026-01-04,TR,venda_a_vista,out,bem,4000000,1600000,caixa,,CLI001,vista,DOC-VENDA-001,Venda à vista de mercadorias,sintética,spec_03_events_v1
+E005,2026-01-05,TR,venda_a_prazo,out,bem,5000000,2000000,,,CLI002,prazo,DOC-VENDA-002,Venda a prazo de mercadorias,sintética,spec_03_events_v1
+E006,2026-01-06,TR,recebimento_cliente,in,financeiro,3000000,,caixa,,CLI002,na,DOC-REC-001,Recebimento de cliente,sintética,spec_03_events_v1
+E007,2026-01-07,TR,despesa_operacional_a_vista,out,servico,500000,,caixa,aluguel,PART-ALUGUEL,na,DOC-DESP-001,Pagamento de aluguel,sintética,spec_03_events_v1
+E008,2026-01-08,ADJ,depreciacao,na,ajuste,20000,,,,,na,,Depreciação do período,sintética,spec_03_events_v1
