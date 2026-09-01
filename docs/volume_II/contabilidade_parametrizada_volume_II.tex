@@ -1,0 +1,980 @@
+\documentclass[11pt,a4paper]{article}
+
+% ------------------------------------------------------------
+% Codificacao, idioma e tipografia -- preserva o padrao do Volume I
+% ------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{geometry}
+\geometry{top=2.2cm,bottom=2.2cm,left=2.25cm,right=2.25cm}
+\usepackage{setspace}
+\setstretch{1.07}
+
+% ------------------------------------------------------------
+% Matematica e tabelas
+% ------------------------------------------------------------
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{bm}
+\usepackage{dsfont}
+\usepackage{array,booktabs,longtable,tabularx,multirow}
+\usepackage{enumitem}
+\usepackage{siunitx}
+\sisetup{output-decimal-marker={,},group-separator={.}}
+
+% ------------------------------------------------------------
+% Graficos e caixas -- mesma paleta do Volume I
+% ------------------------------------------------------------
+\usepackage{xcolor}
+\definecolor{Navy}{HTML}{18324A}
+\definecolor{Blue}{HTML}{2D628F}
+\definecolor{Teal}{HTML}{2D7A78}
+\definecolor{Gold}{HTML}{B8862C}
+\definecolor{Red}{HTML}{9B3A36}
+\definecolor{LightBlue}{HTML}{EDF4F9}
+\definecolor{LightTeal}{HTML}{EEF7F5}
+\definecolor{LightGold}{HTML}{FBF6EA}
+\definecolor{LightRed}{HTML}{FAEFEE}
+\definecolor{LightGray}{HTML}{F4F5F6}
+\definecolor{MidGray}{HTML}{7A838A}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds,shapes.geometric,matrix}
+\usepackage[most]{tcolorbox}
+
+\newtcolorbox{intuicao}[1][]{
+  enhanced,breakable,colback=LightBlue,colframe=Blue,boxrule=0.6pt,
+  arc=1.5mm,left=2mm,right=2mm,top=1.5mm,bottom=1.5mm,
+  title=Intuição,#1}
+\newtcolorbox{formalizacao}[1][]{
+  enhanced,breakable,colback=LightTeal,colframe=Teal,boxrule=0.6pt,
+  arc=1.5mm,left=2mm,right=2mm,top=1.5mm,bottom=1.5mm,
+  title=Formalização,#1}
+\newtcolorbox{cuidado}[1][]{
+  enhanced,breakable,colback=LightRed,colframe=Red,boxrule=0.6pt,
+  arc=1.5mm,left=2mm,right=2mm,top=1.5mm,bottom=1.5mm,
+  title=Precisão conceitual,#1}
+\newtcolorbox{fonte}[1][]{
+  enhanced,breakable,colback=LightGold,colframe=Gold,boxrule=0.6pt,
+  arc=1.5mm,left=2mm,right=2mm,top=1.5mm,bottom=1.5mm,
+  title=Base normativa,#1}
+
+% ------------------------------------------------------------
+% Cabecalho, hiperlinks, secoes
+% ------------------------------------------------------------
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{MidGray}Parametrização matemática -- Volume II}
+\fancyhead[R]{\small\color{MidGray}\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+\setlength{\headheight}{14pt}
+
+\usepackage{titlesec}
+\titleformat{\section}{\Large\bfseries\color{Navy}}{\thesection}{0.75em}{}
+\titleformat{\subsection}{\large\bfseries\color{Blue}}{\thesubsection}{0.65em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{Teal}}{\thesubsubsection}{0.55em}{}
+\titlespacing*{\section}{0pt}{1.8em}{0.7em}
+\titlespacing*{\subsection}{0pt}{1.35em}{0.5em}
+
+\usepackage{xurl}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{
+  pdftitle={Parametrizacao matematica de objetos contabeis e tributarios - Volume II},
+  pdfsubject={Regimes tributarios, dados minimos, contrafactuais e rastreabilidade normativa},
+  pdfauthor={Caderno tecnico},
+  colorlinks=true,
+  linkcolor=Navy,
+  urlcolor=Blue,
+  citecolor=Teal
+}
+\usepackage[nameinlink,noabbrev]{cleveref}
+
+% ------------------------------------------------------------
+% Comandos coerentes com o Volume I
+% ------------------------------------------------------------
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\ind}{\mathds{1}}
+\newcommand{\BP}{\mathrm{BP}}
+\newcommand{\DRE}{\mathrm{DRE}}
+\newcommand{\DFC}{\mathrm{DFC}}
+\newcommand{\DVA}{\mathrm{DVA}}
+\newcommand{\CBS}{\mathrm{CBS}}
+\newcommand{\IBS}{\mathrm{IBS}}
+\newcommand{\IRPJ}{\mathrm{IRPJ}}
+\newcommand{\CSLL}{\mathrm{CSLL}}
+\newcommand{\cT}{\mathcal{T}}
+\newcommand{\cB}{\mathcal{B}}
+\newcommand{\cG}{\mathcal{G}}
+\newcommand{\cA}{\mathcal{A}}
+\newcommand{\cC}{\mathcal{C}}
+\newcommand{\cD}{\mathcal{D}}
+\newcommand{\cH}{\mathcal{H}}
+\newcommand{\cS}{\mathcal{S}}
+\newcommand{\cQ}{\mathcal{Q}}
+\newcommand{\cN}{\mathcal{N}}
+\newcommand{\periodo}[1]{I_{#1}:=(#1,#1+1]}
+\newcommand{\Prov}{\operatorname{Prov}}
+\newcommand{\Dep}{\operatorname{Dep}}
+\newcommand{\Adm}{\operatorname{Adm}}
+\newcommand{\TaxExp}{E^{\mathrm{trib}}}
+\newcommand{\TaxCash}{P^{\mathrm{tax,cash}}}
+
+\setlist[itemize]{leftmargin=1.4em,itemsep=0.25em,topsep=0.35em}
+\setlist[enumerate]{leftmargin=1.7em,itemsep=0.3em,topsep=0.4em}
+
+\begin{document}
+\pagenumbering{gobble}
+
+% ============================================================
+% CAPA
+% ============================================================
+\begin{titlepage}
+\centering
+\vspace*{1.2cm}
+{\Large\color{Blue}\textsc{Caderno de formalização -- Volume II}}\\[0.50cm]
+{\huge\bfseries\color{Navy}Regime tributário, dados mínimos\\[0.15cm]
+e análise contrafactual}\\[0.65cm]
+{\Large\color{Teal}Extensão da parametrização matemática de objetos\\
+contábeis e tributários}\\[1.15cm]
+
+\begin{tcolorbox}[width=0.90\textwidth,colback=LightGray,colframe=MidGray,boxrule=0.5pt,arc=2mm]
+\centering
+\large
+\[
+\boxed{\zeta_t=\bigl(x_t^{\min},u_t^{\min},\rho_t,\eta_t\bigr)}
+\]
+\vspace{-1mm}
+\small
+Dados empresariais observados $\to$ configuração tributária aplicável $\to$\\
+operadores efetivos $\to$ cenário comparável e auditável.
+\end{tcolorbox}
+
+\vfill
+{\large Versão de referência: 1º de setembro de 2026}\\[0.15cm]
+{\small Documento complementar ao Volume I; não constitui parecer contábil ou jurídico.}
+\end{titlepage}
+
+\pagenumbering{roman}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+
+% ============================================================
+\section{Escopo diferencial em relação ao Volume I}
+% ============================================================
+
+O Volume I já formalizou o núcleo do sistema: estado $x_t$, eventos $u_t$, regras contábeis e tributárias, demonstrações, operadores $\cB_j$, $\cA_j$, $\cC_j$ e $\cD_j$, apuração, hierarquia normativa e um primeiro experimento contrafactual. Este Volume II trata apenas da camada que apareceu posteriormente na discussão e que não estava parametrizada, ou estava apenas mencionada.
+
+\begin{formalizacao}
+O diferencial pode ser resumido em cinco objetos novos ou refinados:
+\[
+\boxed{
+\rho_t,\qquad \eta_t,\qquad \zeta_t,\qquad \mathfrak E_{j,t},\qquad \Prov.
+}
+\]
+Eles representam, respectivamente, a configuração tributária da entidade, seu perfil factual, o vetor mínimo de entrada, o seletor de regras efetivamente aplicáveis e a proveniência normativa de cada parâmetro.
+\end{formalizacao}
+
+\subsection{Correções de notação necessárias}
+
+No Volume I, $z_t$ já foi utilizado como símbolo genérico para ajustes e informações fiscais adicionais na construção de uma base tributável. A discussão posterior reutilizou $z_t$ para o vetor completo de entrada do simulador. Para evitar colisão semântica, este Volume II preserva $z_t$ no sentido original e introduz
+\begin{equation}
+\boxed{\zeta_t:=\bigl(x_t^{\min},u_t^{\min},\rho_t,\eta_t\bigr).}
+\label{eq:zeta}
+\end{equation}
+
+Também preservaremos $s_{k,t}$, já usado no Volume I para data/instante da operação. O eventual tratamento especial de uma operação será denotado por $h_{k,t}$, e não por $s_{k,t}$.
+
+\begin{cuidado}
+A comparação realizada para este volume mostrou que o Volume I já mencionava razão/diário, documentos fiscais e uma camada de lançamentos $\Lambda_t$, além de já conter um operador contrafactual. Portanto, esses temas não serão reapresentados do zero. O avanço aqui consiste em parametrizar \emph{quais dados mínimos são necessários}, \emph{como o regime da entidade entra no operador tributário} e \emph{como cada regra fica rastreável até sua fonte oficial}.
+\end{cuidado}
+
+% ============================================================
+\section{O regime tributário como objeto independente $\rho_t$}
+% ============================================================
+
+\subsection{Lei, regime da entidade e fatos da entidade não são o mesmo objeto}
+
+No Volume I, $\Theta_t^{\mathrm{tax}}=(\theta_{j,t})_{j\in\mathsf J_t}$ representa a legislação e regulamentação tributária vigente. Isso, por si só, não especifica qual ramo dessa legislação se aplica a uma entidade concreta.
+
+Introduzimos então
+\begin{equation}
+\boxed{\rho_t\in\mathsf R_t,}
+\label{eq:rho}
+\end{equation}
+onde $\rho_t$ codifica as escolhas, enquadramentos e regimes de apuração relevantes para a entidade no período $t$.
+
+\begin{intuicao}
+$\Theta_t^{\mathrm{tax}}$ responde: ``quais são as regras disponíveis no sistema jurídico?''. Já $\rho_t$ responde: ``em qual configuração tributária esta entidade se encontra?''. Um terceiro objeto, $\eta_t$, descreverá fatos da própria entidade que condicionam elegibilidade e aplicação das regras.
+\end{intuicao}
+
+\subsection{Decomposição por eixos}
+
+Uma parametrização mais fiel do que tratar $\rho_t$ como um rótulo único é
+\begin{equation}
+\boxed{
+\rho_t=
+\bigl(
+\rho_t^{\mathrm{ent}},
+\rho_t^{\mathrm{IR}},
+\rho_t^{\mathrm{cons}},
+\rho_t^{\mathrm{esp}}
+\bigr).
+}
+\label{eq:rho-decomp}
+\end{equation}
+
+Os componentes têm interpretação distinta:
+\begin{itemize}
+    \item $\rho_t^{\mathrm{ent}}$: enquadramento geral da entidade, por exemplo opção pelo Simples Nacional ou situação fora do Simples;
+    \item $\rho_t^{\mathrm{IR}}$: regime/base de apuração aplicável a IRPJ/CSLL quando pertinente, como lucro real, presumido ou arbitrado;
+    \item $\rho_t^{\mathrm{cons}}$: regime de apuração de tributos sobre consumo, incluindo a posição da entidade perante o regime regular de IBS/CBS;
+    \item $\rho_t^{\mathrm{esp}}$: regimes ou tratamentos específicos adicionais relevantes ao caso.
+\end{itemize}
+
+\begin{fonte}
+A Receita Federal informa, na documentação da ECF de 2026, que pessoas jurídicas podem estar tributadas pelo lucro real, arbitrado ou presumido, com exceção dos optantes do Simples Nacional em relação à obrigação de ECF. A LC 214/2025, art. 41, distingue o regime regular de IBS/CBS das regras do Simples Nacional/MEI e prevê que optantes do Simples possam optar por apurar e recolher IBS/CBS pelo regime regular. Ver \cite{RFB_ECF_2026,LC214}.
+\end{fonte}
+
+\begin{cuidado}
+O Simples Nacional não deve ser modelado simplesmente como ``mais uma forma de lucro'' ao lado de real, presumido e arbitrado. Ele é um regime especial e unificado com lógica própria. A decomposição em eixos evita misturar natureza jurídica, base de IRPJ/CSLL e regime de IBS/CBS.
+\end{cuidado}
+
+% ============================================================
+\section{Perfil factual da entidade: $\eta_t$}
+% ============================================================
+
+Certas regras dependem não apenas da opção tributária, mas de fatos da entidade e da operação. Introduzimos
+\begin{equation}
+\boxed{
+\eta_t=
+(\eta_{1,t},\ldots,\eta_{r,t})
+}
+\label{eq:eta}
+\end{equation}
+como vetor de atributos de contexto relevantes ao modelo.
+
+Uma decomposição ilustrativa é
+\begin{equation}
+\eta_t=
+(\text{atividade},\text{localização},\text{porte},\text{cadastros},
+\text{benefícios},\text{condições especiais},\ldots).
+\end{equation}
+
+\begin{cuidado}
+Esses campos não são universalmente obrigatórios em qualquer simulador. A regra metodológica é incluir em $\eta_t$ apenas atributos dos quais algum operador tributário ou teste de elegibilidade realmente dependa. ``Setor'', ``porte'' ou ``localização'' são exemplos, não uma lista normativa fechada.
+\end{cuidado}
+
+\subsection{Regime admissível}
+
+Nem todo $\rho\in\mathsf R_t$ é legalmente admissível para qualquer entidade. Definimos uma função de admissibilidade
+\begin{equation}
+\boxed{
+\chi_t(\rho;\eta_t,\Theta_t^{\mathrm{tax}})\in\{0,1\}
+}
+\label{eq:chi}
+\end{equation}
+e o conjunto de cenários admissíveis
+\begin{equation}
+\boxed{
+\mathsf R_t^{\mathrm{adm}}(\eta_t;\Theta_t^{\mathrm{tax}})
+:=\{\rho\in\mathsf R_t:\chi_t(\rho;\eta_t,\Theta_t^{\mathrm{tax}})=1\}.
+}
+\label{eq:r-adm}
+\end{equation}
+
+\begin{intuicao}
+Antes de perguntar ``quanto a empresa pagaria no regime $\rho$?'', o simulador deve perguntar ``a empresa pode estar nesse regime?''. Isso impede comparar cenários matematicamente definidos, mas juridicamente impossíveis.
+\end{intuicao}
+
+% ============================================================
+\section{Da norma geral à regra efetiva: o seletor $\mathfrak E_{j,t}$}
+% ============================================================
+
+O Volume I aplicava diretamente $\theta_{j,t}$ às operações. Com $\rho_t$ e $\eta_t$ explícitos, é útil introduzir um estágio intermediário:
+\begin{equation}
+\boxed{
+\theta_{j,t}^{\mathrm{eff}}
+=\mathfrak E_{j,t}
+\bigl(\theta_{j,t},\rho_t,\eta_t\bigr).
+}
+\label{eq:effective-rule}
+\end{equation}
+
+$\mathfrak E_{j,t}$ não altera a lei. Ele seleciona, entre as regras vigentes, quais disposições são efetivamente aplicáveis ao contribuinte e à situação considerada.
+
+A cadeia tributária passa a ser
+\begin{equation}
+(\cT_{k,t},\rho_t,\eta_t)
+\xrightarrow{\theta_{j,t}}
+\theta_{j,t}^{\mathrm{eff}}
+\xrightarrow{\cB_j,\cA_j,\cC_j,\cD_j}
+(B_{j,k,t},\tau_{j,k,t},C_{j,k,t},D_{j,k,t}).
+\label{eq:pipeline-effective}
+\end{equation}
+
+\begin{formalizacao}
+No nível do sistema,
+\[
+\Theta_t^{\mathrm{eff}}
+:=\bigl(\mathfrak E_{j,t}(\theta_{j,t},\rho_t,\eta_t)\bigr)_{j\in\mathsf J_t}.
+\]
+O operador tributário do simulador deve depender de $\Theta_t^{\mathrm{eff}}$, não apenas do texto normativo bruto.
+\end{formalizacao}
+
+\begin{fonte}
+A necessidade dessa seleção é observável, por exemplo, no art. 41 da LC 214/2025: a mesma legislação contém ramos diferentes para contribuinte sujeito ao regime regular, optante do Simples/MEI e optante do Simples que escolhe apurar IBS/CBS pelo regime regular. Ver \cite{LC214,RFB_SIMPLES_2026}.
+\end{fonte}
+
+% ============================================================
+\section{Vetor de entrada mínimo como problema de suficiência}
+% ============================================================
+
+\subsection{Definição do vetor mínimo}
+
+O vetor complementar proposto na conversa passa a ser, com notação corrigida,
+\begin{equation}
+\boxed{
+\zeta_t=
+\left(
+ x_t^{\min},
+ u_t^{\min},
+ \rho_t,
+ \eta_t
+\right).
+}
+\end{equation}
+
+A palavra ``mínimo'' não significa ``menor número possível de colunas'' de forma absoluta. Significa: informação suficiente para reproduzir os resultados tributários de interesse no escopo definido.
+
+\subsection{Projeções mínimas}
+
+Se $x_t$ é o estado completo e $u_t$ a coleção granular completa, escrevemos
+\begin{equation}
+\boxed{
+ x_t^{\min}=\Pi_x^{\mathcal H}(x_t),
+ \qquad
+ u_t^{\min}=\Pi_u^{\mathcal H}(u_t),
+}
+\label{eq:min-projections}
+\end{equation}
+em que as projeções retêm apenas os componentes consumidos pelo operador $\cH$.
+
+Podemos caracterizar os campos necessários por
+\begin{equation}
+\Dep(\cH):=\{\text{atributos lidos por }\cH\}.
+\end{equation}
+
+\begin{formalizacao}
+Uma projeção $\Pi$ da informação operacional é \textbf{suficiente para o simulador} se existe $\widetilde{\cH}$ tal que
+\[
+\cH(u_t)=\widetilde{\cH}(\Pi(u_t)).
+\]
+Equivalentemente,
+\[
+\Pi(u_t)=\Pi(u_t')
+\quad\Longrightarrow\quad
+\cH(u_t)=\cH(u_t').
+\]
+Essa é uma noção de suficiência funcional do dado para o cálculo, e não uma definição estatística de suficiência de Fisher.
+\end{formalizacao}
+
+\subsection{Componentes de estado que podem ser necessários}
+
+Em vez de fixar uma lista universal, tratamos
+\begin{equation}
+ x_t^{\min}
+ =\bigl(
+ \text{saldos de estado exigidos pelos operadores vigentes}
+ \bigr).
+\end{equation}
+
+Exemplos possíveis incluem saldos de créditos tributários, obrigações tributárias, prejuízos/bases fiscais carregados, estoques ou outros estados auxiliares quando uma regra possui memória intertemporal.
+
+\begin{fonte}
+A documentação oficial da ECF e o CPC 32 evidenciam que a apuração de tributos sobre o lucro pode exigir bases fiscais, prejuízos fiscais, créditos e diferenças temporárias que conectam períodos. Ver \cite{RFB_ECF_2026,CPC32}.
+\end{fonte}
+
+\subsection{Operação mínima compatível com a notação do Volume I}
+
+O Volume I definiu
+\[
+\cT_{k,t}=(d_{k,t},q_{k,t},v_{k,t},s_{k,t},a_{k,t},p_{k,t},\ell_{k,t},\ldots).
+\]
+Para o problema tributário, refinamos $\ell_{k,t}$ e adicionamos localização e tratamento especial:
+\begin{equation}
+\boxed{
+\cT_{k,t}^{\min}=
+(d_{k,t},q_{k,t},v_{k,t},s_{k,t},\ell_{k,t}^{\min},g_{k,t},h_{k,t}),
+}
+\label{eq:tmin}
+\end{equation}
+onde:
+\begin{itemize}
+  \item $d_{k,t}$: direção entrada/saída;
+  \item $q_{k,t}$: natureza econômica relevante;
+  \item $v_{k,t}$: valor monetário bruto;
+  \item $s_{k,t}$: data/instante da operação, preservando a notação do Volume I;
+  \item $\ell_{k,t}^{\min}$: códigos/classificações contábeis e fiscais efetivamente necessários;
+  \item $g_{k,t}$: atributos de origem, destino ou local da operação quando relevantes;
+  \item $h_{k,t}$: marcador de tratamento específico/diferenciado quando exigido.
+\end{itemize}
+
+\begin{cuidado}
+O conteúdo exato de $\ell^{\min}$, $g$ e $h$ depende do tributo e da versão normativa. A definição correta deve ser obtida por dependência dos operadores, e não por uma lista fixa inventada pelo modelador.
+\end{cuidado}
+
+% ============================================================
+\section{Por que plano de contas ou balancete, isoladamente, podem ser insuficientes}
+% ============================================================
+
+Seja
+\begin{equation}
+\mathcal A_{\mathrm{acct}}:u_t\longmapsto b_t
+\end{equation}
+um operador que agrega a atividade do período em um balancete ou conjunto de saldos contábeis $b_t$.
+
+Se existirem duas coleções de operações $u_t$ e $u_t'$ tais que
+\begin{equation}
+\mathcal A_{\mathrm{acct}}(u_t)=\mathcal A_{\mathrm{acct}}(u_t')
+\quad\text{mas}\quad
+\cH^{\mathrm{tax}}(u_t)\neq\cH^{\mathrm{tax}}(u_t'),
+\label{eq:insuf-aggregate}
+\end{equation}
+então o resultado tributário não pode ser reconstruído unicamente a partir de $b_t$.
+
+\begin{intuicao}
+Duas empresas podem exibir a mesma receita total em um balancete e, ainda assim, ter operações com classificações fiscais, locais, destinatários ou tratamentos diferentes. Se alguma dessas diferenças altera $\cB_j$, $\cA_j$ ou $\cC_j$, a agregação contábil perdeu informação necessária ao recálculo tributário.
+\end{intuicao}
+
+Definimos o conjunto de resultados compatíveis com um agregado $b_t$ por
+\begin{equation}
+\boxed{
+\mathcal Y(b_t)
+:=\{\cH^{\mathrm{tax}}(u):\mathcal A_{\mathrm{acct}}(u)=b_t\}.
+}
+\end{equation}
+Se $\mathcal Y(b_t)$ não é unitário, existe \emph{não identificação} do resultado tributário a partir daquele agregado.
+
+\begin{fonte}
+A orientação oficial da RTC para 2026 exige, para os documentos alcançados, destaque de CBS e IBS individualizado por operação segundo os leiautes técnicos. Esse nível operacional é evidência direta de que a camada tributária trabalha com atributos mais granulares do que um total contábil agregado. Ver \cite{RFB_ORIENT_2026,RFB_RTC_LEG}.
+\end{fonte}
+
+% ============================================================
+\section{Camada prática de dados: de registros reais a $\zeta_t$}
+% ============================================================
+
+\subsection{Pacote de fontes empresariais}
+
+Para aproximar a abstração dos arquivos efetivamente disponíveis, definimos
+\begin{equation}
+\boxed{
+\cQ_t=
+(\mathsf{ECD}_t,\mathsf{ECF}_t,\mathsf{DocFisc}_t,\mathsf{Cad}_t,\mathsf{Aux}_t),
+}
+\label{eq:qdata}
+\end{equation}
+onde os componentes representam, quando aplicáveis:
+\begin{itemize}
+  \item $\mathsf{ECD}_t$: escrituração contábil digital e estruturas associadas, como plano de contas, lançamentos e saldos;
+  \item $\mathsf{ECF}_t$: escrituração contábil-fiscal e controles relativos à tributação da renda;
+  \item $\mathsf{DocFisc}_t$: documentos fiscais eletrônicos e seus atributos por operação;
+  \item $\mathsf{Cad}_t$: dados cadastrais e de enquadramento;
+  \item $\mathsf{Aux}_t$: módulos auxiliares necessários, como estoques, contas a receber/pagar ou controles fiscais específicos.
+\end{itemize}
+
+A reconstrução do vetor de entrada é um operador de integração de dados:
+\begin{equation}
+\boxed{
+\widehat\zeta_t=\cN_t(\cQ_t),
+}
+\label{eq:normalize}
+\end{equation}
+em que $\cN_t$ executa extração, normalização, conciliação e mapeamento para o esquema formal.
+
+\begin{fonte}
+O Manual da ECD 2026 descreve a escrituração digital e registros de plano de contas, saldos e lançamentos; a Receita Federal mantém documentação própria da ECF para as bases fiscais; e as orientações da RTC de 2026 especificam documentos fiscais eletrônicos com IBS/CBS individualizados por operação. Ver \cite{ECD2026,RFB_ECF_2026,RFB_ORIENT_2026}.
+\end{fonte}
+
+\subsection{Relação com a camada $\Lambda_t$ do Volume I}
+
+A camada de lançamentos/razão $\Lambda_t$ do Volume I não é substituída. Ela pode ser recuperada a partir de $\mathsf{ECD}_t$ e sistemas contábeis, enquanto $\mathsf{DocFisc}_t$ fornece atributos transacionais que podem não sobreviver integralmente à agregação contábil.
+
+\begin{formalizacao}
+Uma arquitetura de integração compatível com os dois volumes é
+\[
+\cQ_t
+\xrightarrow{\cN_t}
+\zeta_t
+\xrightarrow{\mathfrak E_t}
+\Theta_t^{\mathrm{eff}}
+\xrightarrow{\cH}
+Y_t.
+\]
+\end{formalizacao}
+
+\begin{center}
+\begin{tikzpicture}[
+  node distance=8mm and 8mm,
+  box/.style={draw=Navy,rounded corners=2mm,fill=LightBlue,align=center,minimum height=10mm,minimum width=27mm,font=\small},
+  op/.style={draw=Teal,rounded corners=2mm,fill=LightTeal,align=center,minimum height=10mm,minimum width=26mm,font=\small},
+  arr/.style={-{Latex[length=2.2mm]},thick,Navy}
+]
+\node[box] (q) {$\cQ_t$\\fontes reais};
+\node[op,right=of q] (n) {$\cN_t$\\normalização};
+\node[box,right=of n] (z) {$\zeta_t$\\entrada mínima};
+\node[op,right=of z] (e) {$\mathfrak E_t$\\regras efetivas};
+\node[box,right=of e] (y) {$Y_t$\\saídas};
+\draw[arr] (q)--(n);
+\draw[arr] (n)--(z);
+\draw[arr] (z)--(e);
+\draw[arr] (e)--(y);
+\end{tikzpicture}
+\end{center}
+
+% ============================================================
+\section{Experimento contrafactual com lei e regime}
+% ============================================================
+
+O Volume I comparava $\Theta^{\mathrm{old}}$ e $\Theta^{\mathrm{new}}$ mantendo $(x_t,u_t)$ fixos. A nova camada permite separar três efeitos: mudança legislativa, mudança de regime e interação entre ambos.
+
+Defina a base econômica observada sem o regime:
+\begin{equation}
+\boxed{
+\bar\zeta_t:=(x_t^{\min},u_t^{\min},\eta_t).
+}
+\end{equation}
+Para um cenário $s$,
+\begin{equation}
+\zeta_t^{(s)}=(\bar\zeta_t,\rho_t^{(s)}),
+\qquad
+Y_t^{(s)}=\cH(\zeta_t^{(s)};\Theta_t^{(s)}).
+\end{equation}
+
+\subsection{Decomposição dos efeitos}
+
+Com cenário inicial $(\rho^0,\Theta^0)$ e cenário final $(\rho^1,\Theta^1)$, definimos
+\begin{align}
+\Delta_{\Theta}Y_t
+&:=\cH(\bar\zeta_t,\rho^0;\Theta^1)
+   -\cH(\bar\zeta_t,\rho^0;\Theta^0),\\
+\Delta_{\rho}Y_t
+&:=\cH(\bar\zeta_t,\rho^1;\Theta^0)
+   -\cH(\bar\zeta_t,\rho^0;\Theta^0),\\
+\Delta_{\mathrm{joint}}Y_t
+&:=\cH(\bar\zeta_t,\rho^1;\Theta^1)
+   -\cH(\bar\zeta_t,\rho^0;\Theta^0).
+\end{align}
+
+A interação residual é
+\begin{equation}
+\boxed{
+\Delta_{\mathrm{int}}Y_t
+:=\Delta_{\mathrm{joint}}Y_t
+ -\Delta_{\Theta}Y_t
+ -\Delta_{\rho}Y_t.
+}
+\label{eq:interaction}
+\end{equation}
+
+\begin{intuicao}
+Essa decomposição evita atribuir à ``Reforma'' um efeito que, na verdade, veio de uma troca de regime da empresa; e evita atribuir à troca de regime um efeito causado pela nova lei. Quando ambos mudam, $\Delta_{\mathrm{int}}$ mede a parte que não é explicada pela soma dos efeitos isolados.
+\end{intuicao}
+
+\begin{cuidado}
+Cada cenário envolvendo $\rho^s$ deve satisfazer $\rho^s\in\mathsf R_t^{\mathrm{adm}}(\eta_t;\Theta^s)$. O contrafactual é condicional à manutenção de $\bar\zeta_t$; ele isola o efeito normativo/paramétrico, mas não modela reações de preço, quantidade, investimento ou reorganização operacional.
+\end{cuidado}
+
+% ============================================================
+\section{Qual impacto medir? Apuração, caixa e despesa tributária}
+% ============================================================
+
+A conversa posterior propôs comparar ``despesas com impostos''. Esse objetivo exige uma distinção adicional: montante apurado, valor a recolher, pagamento de caixa e despesa contábil não são o mesmo objeto.
+
+Definimos, por tributo $j$:
+\begin{equation}
+\boxed{
+Y_{j,t}^{\mathrm{tax}}=
+\left(
+S_{j,t}^{\mathrm{apur}},
+T_{j,t}^{\mathrm{recolher}},
+P_{j,t}^{\mathrm{cash}},
+E_{j,t}^{\mathrm{DRE}},
+C_{j,t}^{\mathrm{saldo}}
+\right).
+}
+\label{eq:tax-output}
+\end{equation}
+
+Aqui:
+\begin{itemize}
+  \item $S_{j,t}^{\mathrm{apur}}$: saldo de apuração, já definido no Volume I;
+  \item $T_{j,t}^{\mathrm{recolher}}$: obrigação positiva a recolher;
+  \item $P_{j,t}^{\mathrm{cash}}$: pagamento financeiro realizado no período;
+  \item $E_{j,t}^{\mathrm{DRE}}$: efeito reconhecido como despesa/resultado segundo a norma contábil aplicável;
+  \item $C_{j,t}^{\mathrm{saldo}}$: saldo credor/ativo recuperável quando aplicável.
+\end{itemize}
+
+\subsection{Tributos sobre o lucro}
+
+Para tributos sobre o lucro, o CPC 32 distingue tributo corrente e diferido. Em notação resumida,
+\begin{equation}
+\boxed{
+E_t^{\mathrm{IR,trib}}
+=E_t^{\mathrm{corrente}}+E_t^{\mathrm{diferido}}
+}
+\end{equation}
+no escopo da despesa/receita tributária tratada pelo pronunciamento.
+
+\subsection{Tributos recuperáveis sobre aquisições}
+
+Para estoques, o CPC 16 determina que tributos recuperáveis junto ao fisco não compõem o custo de aquisição. Portanto, a existência de um crédito tributário recuperável impede a identificação ingênua
+\[
+\text{tributo destacado ou apurado}\equiv\text{despesa contábil}.
+\]
+
+\begin{fonte}
+O CPC 32 define despesa tributária como composta por despesa tributária corrente e diferida no contexto de tributos sobre o lucro. O CPC 16 exclui do custo de aquisição de estoques os tributos recuperáveis junto ao fisco. Ver \cite{CPC32,CPC16}.
+\end{fonte}
+
+\begin{formalizacao}
+Para o projeto, a função-objetivo deve ser declarada explicitamente. Exemplos:
+\[
+\Delta T_t^{\mathrm{recolher}},\qquad
+\Delta P_t^{\mathrm{cash}},\qquad
+\Delta E_t^{\mathrm{DRE}},\qquad
+\Delta C_t^{\mathrm{saldo}},\qquad
+\Delta L_t^{\mathrm{ap\acute{o}s\ tributos}}.
+\]
+A expressão ``impacto tributário'' é ambígua enquanto esse vetor de resposta não estiver fixado.
+\end{formalizacao}
+
+% ============================================================
+\section{Camada de proveniência e versionamento normativo}
+% ============================================================
+
+O Volume I já apresentou a hierarquia constitucional, legal e regulamentar. O avanço necessário para um simulador auditável é associar cada parâmetro implementado a uma fonte e a uma versão.
+
+\subsection{Taxonomia de fontes}
+
+Definimos
+\begin{equation}
+\boxed{
+\cS=
+\{S^{\mathrm{norm}},S^{\mathrm{reg}},S^{\mathrm{tec}},S^{\mathrm{oper}}\},
+}
+\label{eq:sources}
+\end{equation}
+com classificação operacional:
+\begin{itemize}
+  \item $S^{\mathrm{norm}}$: Constituição, emendas, leis complementares e demais normas legais de referência;
+  \item $S^{\mathrm{reg}}$: decretos, resoluções, instruções e atos regulamentares;
+  \item $S^{\mathrm{tec}}$: estudos e materiais técnicos oficiais, úteis para interpretação e parametrização, sem substituir a norma;
+  \item $S^{\mathrm{oper}}$: manuais, leiautes, notas técnicas e documentação de sistemas/documentos eletrônicos.
+\end{itemize}
+
+\begin{cuidado}
+$\cS$ é uma classificação de fontes para engenharia do modelo, não uma nova hierarquia jurídica. Documentos técnicos e operacionais não prevalecem sobre normas de nível superior.
+\end{cuidado}
+
+\subsection{Proveniência de cada parâmetro}
+
+Para cada parâmetro, regra ou ramificação implementada $p$, armazenamos
+\begin{equation}
+\boxed{
+\Prov(p)=
+(\text{fonte},\text{dispositivo},\text{versão},\text{vigência},\text{data de consulta}).
+}
+\label{eq:provenance}
+\end{equation}
+
+A regra metodológica é
+\begin{equation}
+\boxed{
+\forall p\in\Theta_t^{\mathrm{eff}},\qquad \Prov(p)\neq\varnothing.
+}
+\label{eq:trace-rule}
+\end{equation}
+
+Também convém versionar a função implementada:
+\begin{equation}
+\cH_t=\cH^{[\nu(t)]},
+\end{equation}
+em que $\nu(t)$ identifica a versão normativa e computacional usada no período.
+
+\begin{fonte}
+A Receita Federal mantém página consolidada da legislação da RTC com EC 132/2023, LC 214/2025, LC 227/2026, Decreto 12.955/2026, atos conjuntos e atos técnicos. A mesma instituição, em parceria com o CFC, disponibiliza curso oficial cujo Módulo 1 cobre fato gerador, base de cálculo, alíquotas, local da operação, não cumulatividade e apuração. Ver \cite{RFB_RTC_LEG,RFB_CURSO}.
+\end{fonte}
+
+% ============================================================
+\section{Exemplos}
+% ============================================================
+
+\subsection{Exemplo ilustrativo I -- por que um agregado pode não identificar o tributo}
+
+Suponha que um balancete informe apenas receita total de R\$ 200. Existem duas decomposições compatíveis:
+\[
+u_t^{(A)}=(\cT_{1,t}^{(A)},\cT_{2,t}^{(A)}),
+\qquad
+u_t^{(B)}=(\cT_{1,t}^{(B)},\cT_{2,t}^{(B)}),
+\]
+com
+\[
+\sum_k v_{k,t}^{(A)}=\sum_k v_{k,t}^{(B)}=200.
+\]
+Se as classificações fiscais ou locais das operações diferirem e isso alterar $\cA_j$ ou $\cB_j$, então
+\[
+\mathcal A_{\mathrm{acct}}(u_t^{(A)})
+=\mathcal A_{\mathrm{acct}}(u_t^{(B)})
+\quad\text{e}\quad
+\cH^{\mathrm{tax}}(u_t^{(A)})\neq\cH^{\mathrm{tax}}(u_t^{(B)}).
+\]
+Logo, o balancete é insuficiente para esse cálculo. Não é necessário supor números de alíquotas: o resultado é estrutural.
+
+\subsection{Exemplo ilustrativo II -- separação dos efeitos de lei e regime}
+
+Considere um resultado escalar $Y$ e valores hipotéticos:
+\[
+\cH(\rho^0;\Theta^0)=100,
+\quad
+\cH(\rho^0;\Theta^1)=108,
+\quad
+\cH(\rho^1;\Theta^0)=96,
+\quad
+\cH(\rho^1;\Theta^1)=101.
+\]
+Então
+\begin{align*}
+\Delta_{\Theta}Y&=108-100=8,\\
+\Delta_{\rho}Y&=96-100=-4,\\
+\Delta_{\mathrm{joint}}Y&=101-100=1,\\
+\Delta_{\mathrm{int}}Y&=1-8-(-4)=-3.
+\end{align*}
+A troca conjunta produz aumento de 1, mas isso não significa que ``a nova lei aumentou 1''. A decomposição revela efeitos opostos e uma interação de $-3$.
+
+\subsection{Exemplo legal I -- Simples Nacional e regime regular de IBS/CBS}
+
+A LC 214/2025, art. 41, permite representar uma bifurcação real do seletor de regras. Para uma entidade optante do Simples Nacional:
+\[
+\rho_t^{\mathrm{cons}}
+\in
+\{\text{regras do Simples},\text{opção pelo regime regular de IBS/CBS}\},
+\]
+observadas as condições legais.
+
+No modelo:
+\[
+\theta_{\IBS,t}^{\mathrm{eff}}
+=\mathfrak E_{\IBS,t}(\theta_{\IBS,t},\rho_t,\eta_t),
+\qquad
+\theta_{\CBS,t}^{\mathrm{eff}}
+=\mathfrak E_{\CBS,t}(\theta_{\CBS,t},\rho_t,\eta_t).
+\]
+O exemplo é de \emph{seleção de ramo normativo}; não atribuímos aqui alíquota ou vantagem econômica sem os dados concretos da empresa.
+
+\begin{fonte}
+O art. 41 da LC 214/2025 disciplina o regime regular e a opção de contribuinte do Simples pelo regime regular. Em agosto de 2026, o CGSN atualizou regras do Simples para adaptação à RTC, incluindo IBS e CBS. Ver \cite{LC214,RFB_SIMPLES_2026}.
+\end{fonte}
+
+\subsection{Exemplo legal-operacional II -- granularidade documental em 2026}
+
+A orientação oficial para 2026 determina que os documentos fiscais eletrônicos alcançados sejam emitidos com destaque de CBS e IBS individualizados por operação conforme notas técnicas. Logo, uma implementação pode usar
+\[
+\mathsf{DocFisc}_t\xrightarrow{\cN_t}u_t^{\min}
+\]
+como uma das rotas de reconstrução da camada granular.
+
+\begin{fonte}
+A Receita Federal lista, entre os documentos eletrônicos abrangidos pelas orientações de 2026, NF-e, NFC-e, CT-e e outros documentos, cada qual sujeito aos leiautes técnicos aplicáveis. Ver \cite{RFB_ORIENT_2026}.
+\end{fonte}
+
+% ============================================================
+\section{Especificação mínima recomendada para um MVP}
+% ============================================================
+
+A versão mais enxuta do projeto deve ser definida pela pergunta de cálculo. Se o cenário não exige memória de períodos anteriores, pode-se testar
+\begin{equation}
+\boxed{
+\zeta_t^{\mathrm{MVP}}
+=(u_t^{\min},\rho_t,\eta_t).
+}
+\label{eq:mvp}
+\end{equation}
+Se qualquer operador depender de saldos carregados, $x_t^{\min}$ volta a ser obrigatório.
+
+\subsection{Dicionário mínimo de dados}
+
+\renewcommand{\arraystretch}{1.15}
+\small
+\begin{longtable}{>{\raggedright\arraybackslash}p{2.0cm}>{\raggedright\arraybackslash}p{2.9cm}>{\raggedright\arraybackslash}p{4.1cm}>{\raggedright\arraybackslash}p{4.8cm}}
+\toprule
+\textbf{Objeto} & \textbf{Função no modelo} & \textbf{Fonte prática candidata} & \textbf{Critério de inclusão}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Objeto} & \textbf{Função no modelo} & \textbf{Fonte prática candidata} & \textbf{Critério de inclusão}\\
+\midrule
+\endhead
+$x_t^{\min}$ & estados com memória & ECD, ECF, controles fiscais/auxiliares & incluir se algum operador lê saldo de período anterior\\
+$u_t^{\min}$ & operações necessárias ao cálculo & documentos fiscais e sistemas transacionais & projeção suficiente para $\cH$\\
+$\rho_t$ & regime aplicável & cadastro fiscal, opção/regime declarado, documentação fiscal & obrigatório em cenários com regras dependentes de regime\\
+$\eta_t$ & fatos da entidade & dados cadastrais e mestres & incluir atributos usados por admissibilidade ou regras\\
+$\ell_{k,t}^{\min}$ & códigos fiscais/contábeis & documento fiscal, cadastro de item/serviço, escrituração & incluir códigos consumidos por $\cB_j,\cA_j,\cC_j$\\
+$g_{k,t}$ & local da operação & documento fiscal/cadastro & incluir quando a regra dependa do local\\
+$h_{k,t}$ & tratamento específico & classificação fiscal/regra aplicada & incluir quando houver regime específico/diferenciado\\
+$\Prov(p)$ & auditoria normativa & repositório oficial de normas e documentação técnica & obrigatório para qualquer parâmetro codificado\\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\begin{formalizacao}
+O MVP não é definido por ``quantidade pequena de campos'', mas pela condição
+\[
+\text{informação coletada}
+\;\Longrightarrow\;
+\text{resultado identificável, reproduzível e normativamente rastreável}.
+\]
+\end{formalizacao}
+
+% ============================================================
+\section{Arquitetura consolidada do Volume II}
+% ============================================================
+
+A extensão completa pode ser resumida pelo fluxo
+\begin{equation}
+\boxed{
+\cQ_t
+\xrightarrow{\cN_t}
+\bar\zeta_t
+\xrightarrow{(\rho_t,\eta_t)}
+\zeta_t
+\xrightarrow{\mathfrak E_t(\Theta_t)}
+\Theta_t^{\mathrm{eff}}
+\xrightarrow{\cH}
+Y_t
+\xrightarrow{\Prov}
+\text{resultado auditável}.
+}
+\end{equation}
+
+O Volume I responde principalmente \emph{como operações viram demonstrações e tributos}. O Volume II acrescenta quatro perguntas operacionais:
+\begin{enumerate}
+  \item qual configuração tributária da entidade seleciona as regras relevantes;
+  \item quais dados empresariais são suficientes para executar os operadores;
+  \item qual grandeza de impacto será comparada no contrafactual;
+  \item de qual dispositivo oficial veio cada parâmetro implementado.
+\end{enumerate}
+
+% ============================================================
+\appendix
+\section{Matriz de diferencial: conversa posterior versus Volume I}
+% ============================================================
+
+\begin{longtable}{p{3.6cm}p{4.1cm}p{6.1cm}}
+\toprule
+\textbf{Tema da conversa posterior} & \textbf{Situação no Volume I} & \textbf{Tratamento neste Volume II}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Tema da conversa posterior} & \textbf{Situação no Volume I} & \textbf{Tratamento neste Volume II}\\
+\midrule
+\endhead
+Regime tributário $\rho_t$ & ausente como objeto independente & definição por eixos, admissibilidade e seleção de regras efetivas\\
+Características $\eta_t$ da entidade & implícitas em atributos e regras & vetor explícito de fatos de contexto\\
+Vetor mínimo $z_t$ da conversa & não existente; $z_t$ já tinha outro significado & renomeado para $\zeta_t$ e definido por projeções suficientes\\
+Plano de contas/Razão + documentos fiscais & fontes mencionadas em prosa & camada $\cQ_t$ e operador de normalização $\cN_t$\\
+Simulador contrafactual & já existia para $\Theta^{old}/\Theta^{new}$ & decomposição entre efeito de lei, efeito de regime e interação\\
+``Despesa com impostos'' & não separada como alvo de saída & distinção entre apuração, recolhimento, caixa, despesa contábil e crédito\\
+Fontes oficiais & bibliografia e hierarquia já presentes & proveniência por parâmetro, versionamento e classes $\cS$\\
+MVP de dados & ausente & critério de suficiência funcional e dicionário mínimo\\
+\bottomrule
+\end{longtable}
+
+% ============================================================
+\section{Símbolos adicionais}
+% ============================================================
+
+\begin{longtable}{p{3.1cm}p{3.0cm}p{7.4cm}}
+\toprule
+\textbf{Símbolo} & \textbf{Tipo} & \textbf{Definição}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Símbolo} & \textbf{Tipo} & \textbf{Definição}\\
+\midrule
+\endhead
+$\rho_t$ & configuração tributária & regime/enquadramento da entidade no período\\
+$\eta_t$ & vetor factual & atributos da entidade relevantes à regra/admissibilidade\\
+$\zeta_t$ & vetor de entrada & $(x_t^{\min},u_t^{\min},\rho_t,\eta_t)$\\
+$\bar\zeta_t$ & base econômica & vetor de entrada sem a escolha de regime\\
+$\mathfrak E_{j,t}$ & seletor & transforma regra geral em regra efetivamente aplicável\\
+$\chi_t$ & indicador & verifica admissibilidade de um regime no cenário\\
+$\mathsf R_t^{\mathrm{adm}}$ & conjunto & regimes admissíveis à entidade no cenário\\
+$\cQ_t$ & pacote de fontes & ECD, ECF, documentos fiscais, cadastro e auxiliares\\
+$\cN_t$ & operador ETL & normaliza fontes reais no esquema do simulador\\
+$\Prov(p)$ & metadado & fonte, dispositivo, versão, vigência e consulta de $p$\\
+$P_{j,t}^{\mathrm{cash}}$ & fluxo & pagamento financeiro do tributo no período\\
+$E_{j,t}^{\mathrm{DRE}}$ & resultado & efeito reconhecido no resultado conforme norma aplicável\\
+\bottomrule
+\end{longtable}
+
+% ============================================================
+\section{Siglas adicionais}
+% ============================================================
+
+\begin{tabularx}{\textwidth}{>{\bfseries}p{2.6cm}X}
+\toprule
+ECD & Escrituração Contábil Digital\\
+ECF & Escrituração Contábil Fiscal\\
+SPED & Sistema Público de Escrituração Digital\\
+RFB & Receita Federal do Brasil\\
+CFC & Conselho Federal de Contabilidade\\
+CGSN & Comitê Gestor do Simples Nacional\\
+MEI & Microempreendedor Individual\\
+NF-e & Nota Fiscal Eletrônica\\
+NFC-e & Nota Fiscal de Consumidor Eletrônica\\
+CT-e & Conhecimento de Transporte Eletrônico\\
+MVP & Produto Mínimo Viável, no sentido de primeira implementação funcional\\
+\bottomrule
+\end{tabularx}
+
+% ============================================================
+\section{Referências normativas, contábeis e operacionais}
+% ============================================================
+
+\begin{thebibliography}{99}
+
+\bibitem{LC214}
+BRASIL. \textit{Lei Complementar nº 214, de 16 de janeiro de 2025, texto compilado}. Institui IBS, CBS e IS e disciplina, entre outros temas, o regime regular de IBS/CBS. Disponível em: \url{https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214compilado.htm}. Acesso em: 1 set. 2026.
+
+\bibitem{RFB_RTC_LEG}
+RECEITA FEDERAL DO BRASIL. \textit{Legislação da Reforma Tributária do Consumo}. Página atualizada em 18 ago. 2026, com EC 132/2023, LC 214/2025, LC 227/2026, Decreto 12.955/2026 e atos conjuntos/técnicos. Disponível em: \url{https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/acoes-e-programas/programas-e-atividades/reforma-tributaria-do-consumo/legislacao}. Acesso em: 1 set. 2026.
+
+\bibitem{RFB_SIMPLES_2026}
+RECEITA FEDERAL DO BRASIL. \textit{CGSN atualiza regras do Simples Nacional para adequação à Reforma Tributária do Consumo}. 11 ago. 2026. Disponível em: \url{https://www.gov.br/receitafederal/pt-br/assuntos/noticias/2026/agosto/cgsn-atualiza-regras-do-simples-nacional-para-adequacao-a-reforma-tributaria-do-consumo/}. Acesso em: 1 set. 2026.
+
+\bibitem{RFB_ECF_2026}
+RECEITA FEDERAL DO BRASIL. \textit{ECF e Tributos da Pessoa Jurídica -- Perguntas e Respostas 2026}. Atualizado em 31 jul. 2026. Disponível em: \url{https://www.gov.br/receitafederal/pt-br/centrais-de-conteudo/publicacoes/perguntas-e-respostas/ecf}. Acesso em: 1 set. 2026.
+
+\bibitem{ECD2026}
+SISTEMA PÚBLICO DE ESCRITURAÇÃO DIGITAL. \textit{Manual de Orientação da ECD -- Leiaute 9 -- Atualização janeiro de 2026}. Anexo ao ADE Cofis nº 1/2026. Disponível em: \url{https://sped.rfb.gov.br/item/show/7990}. Acesso em: 1 set. 2026.
+
+\bibitem{RFB_ORIENT_2026}
+RECEITA FEDERAL DO BRASIL. \textit{Orientações da Reforma Tributária para 2026}. Atualizado em 6 maio 2026. Define, entre outras obrigações, emissão de documentos fiscais eletrônicos com CBS e IBS individualizados por operação conforme notas técnicas. Disponível em: \url{https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/acoes-e-programas/programas-e-atividades/reforma-tributaria-do-consumo/orientacoes-2026}. Acesso em: 1 set. 2026.
+
+\bibitem{RFB_CURSO}
+RECEITA FEDERAL DO BRASIL; CONSELHO FEDERAL DE CONTABILIDADE. \textit{Curso Reforma Tributária do Consumo -- programação e materiais de apoio}. Em 2026, o Módulo 1 cobre fato gerador, base de cálculo, alíquotas, local da operação, não cumulatividade e apuração. Disponível em: \url{https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/acoes-e-programas/programas-e-atividades/reforma-tributaria-do-consumo/curso/programacao}. Acesso em: 1 set. 2026.
+
+\bibitem{CPC16}
+COMITÊ DE PRONUNCIAMENTOS CONTÁBEIS. \textit{CPC 16 (R1) -- Estoques}. O custo de aquisição exclui tributos recuperáveis junto ao fisco. Sumário disponível em: \url{https://www.cpc.org.br/Arquivos/Documentos/244_CPC_16_Sumario.pdf}. Acesso em: 1 set. 2026.
+
+\bibitem{CPC32}
+COMITÊ DE PRONUNCIAMENTOS CONTÁBEIS. \textit{CPC 32 -- Tributos sobre o Lucro}. Define, entre outros objetos, despesa tributária corrente e diferida. Disponível em: \url{https://www.cpc.org.br/Arquivos/Documentos/340_CPC_32_rev%2013.pdf}. Acesso em: 1 set. 2026.
+
+\end{thebibliography}
+
+\end{document}

@@ -1,0 +1,1608 @@
+\documentclass[11pt,a4paper]{article}
+
+% ------------------------------------------------------------
+% Codificacao, idioma e tipografia -- preserva o padrao dos Volumes I e II
+% ------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{geometry}
+\geometry{top=2.2cm,bottom=2.2cm,left=2.25cm,right=2.25cm}
+\usepackage{setspace}
+\setstretch{1.07}
+
+% ------------------------------------------------------------
+% Matematica e tabelas
+% ------------------------------------------------------------
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{bm}
+\usepackage{dsfont}
+\usepackage{array,booktabs,longtable,tabularx,multirow,makecell}
+\usepackage{enumitem}
+\usepackage{siunitx}
+\sisetup{output-decimal-marker={,},group-separator={.}}
+
+% ------------------------------------------------------------
+% Graficos e caixas -- mesma paleta dos Volumes I e II
+% ------------------------------------------------------------
+\usepackage{xcolor}
+\definecolor{Navy}{HTML}{18324A}
+\definecolor{Blue}{HTML}{2D628F}
+\definecolor{Teal}{HTML}{2D7A78}
+\definecolor{Gold}{HTML}{B8862C}
+\definecolor{Red}{HTML}{9B3A36}
+\definecolor{LightBlue}{HTML}{EDF4F9}
+\definecolor{LightTeal}{HTML}{EEF7F5}
+\definecolor{LightGold}{HTML}{FBF6EA}
+\definecolor{LightRed}{HTML}{FAEFEE}
+\definecolor{LightGray}{HTML}{F4F5F6}
+\definecolor{MidGray}{HTML}{7A838A}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds,shapes.geometric,matrix}
+\usepackage[most]{tcolorbox}
+
+\newtcolorbox{intuicao}[1][]{
+  enhanced,breakable,colback=LightBlue,colframe=Blue,boxrule=0.6pt,
+  arc=1.5mm,left=2mm,right=2mm,top=1.5mm,bottom=1.5mm,
+  title=Intuição,#1}
+\newtcolorbox{formalizacao}[1][]{
+  enhanced,breakable,colback=LightTeal,colframe=Teal,boxrule=0.6pt,
+  arc=1.5mm,left=2mm,right=2mm,top=1.5mm,bottom=1.5mm,
+  title=Formalização,#1}
+\newtcolorbox{cuidado}[1][]{
+  enhanced,breakable,colback=LightRed,colframe=Red,boxrule=0.6pt,
+  arc=1.5mm,left=2mm,right=2mm,top=1.5mm,bottom=1.5mm,
+  title=Precisão conceitual,#1}
+\newtcolorbox{fonte}[1][]{
+  enhanced,breakable,colback=LightGold,colframe=Gold,boxrule=0.6pt,
+  arc=1.5mm,left=2mm,right=2mm,top=1.5mm,bottom=1.5mm,
+  title=Base normativa,#1}
+
+% ------------------------------------------------------------
+% Cabecalho, hiperlinks, secoes
+% ------------------------------------------------------------
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{MidGray}Parametrização matemática -- Volume III}
+\fancyhead[R]{\small\color{MidGray}\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+\setlength{\headheight}{14pt}
+
+\usepackage{titlesec}
+\titleformat{\section}{\Large\bfseries\color{Navy}}{\thesection}{0.75em}{}
+\titleformat{\subsection}{\large\bfseries\color{Blue}}{\thesubsection}{0.65em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{Teal}}{\thesubsubsection}{0.55em}{}
+\titlespacing*{\section}{0pt}{1.8em}{0.7em}
+\titlespacing*{\subsection}{0pt}{1.35em}{0.5em}
+
+\usepackage{xurl}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{
+  pdftitle={Parametrizacao matematica de objetos contabeis e tributarios - Volume III},
+  pdfsubject={Plano de contas, escrituracao, Livro Razao e interface Excel},
+  pdfauthor={Caderno tecnico},
+  colorlinks=true,
+  linkcolor=Navy,
+  urlcolor=Blue,
+  citecolor=Teal
+}
+\usepackage[nameinlink,noabbrev]{cleveref}
+
+% ------------------------------------------------------------
+% Comandos canonicos herdados dos Volumes I e II
+% ------------------------------------------------------------
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\ind}{\mathds{1}}
+\newcommand{\BP}{\mathrm{BP}}
+\newcommand{\DRE}{\mathrm{DRE}}
+\newcommand{\DFC}{\mathrm{DFC}}
+\newcommand{\DVA}{\mathrm{DVA}}
+\newcommand{\CBS}{\mathrm{CBS}}
+\newcommand{\IBS}{\mathrm{IBS}}
+\newcommand{\IRPJ}{\mathrm{IRPJ}}
+\newcommand{\CSLL}{\mathrm{CSLL}}
+\newcommand{\cT}{\mathcal{T}}
+\newcommand{\cB}{\mathcal{B}}
+\newcommand{\cG}{\mathcal{G}}
+\newcommand{\cA}{\mathcal{A}}
+\newcommand{\cC}{\mathcal{C}}
+\newcommand{\cD}{\mathcal{D}}
+\newcommand{\cH}{\mathcal{H}}
+\newcommand{\cS}{\mathcal{S}}
+\newcommand{\cQ}{\mathcal{Q}}
+\newcommand{\cN}{\mathcal{N}}
+\newcommand{\periodo}[1]{I_{#1}:=(#1,#1+1]}
+\newcommand{\Prov}{\operatorname{Prov}}
+\newcommand{\Dep}{\operatorname{Dep}}
+\newcommand{\Adm}{\operatorname{Adm}}
+
+% ------------------------------------------------------------
+% Objetos novos do Volume III -- escolhidos para evitar colisoes canonicas
+% ------------------------------------------------------------
+\newcommand{\Plano}{\mathcal{P}}
+\newcommand{\cE}{\mathcal{E}}
+\newcommand{\Dia}{\mathsf{Dia}}
+\newcommand{\Raz}{\mathsf{Raz}}
+\newcommand{\Bal}{\mathsf{Bal}}
+\newcommand{\Wb}{\mathcal{W}}
+\newcommand{\cod}{\operatorname{cod}}
+\newcommand{\nome}{\operatorname{nome}}
+\newcommand{\nat}{\operatorname{nat}}
+\newcommand{\tipo}{\operatorname{tipo}}
+\newcommand{\niv}{\operatorname{niv}}
+\newcommand{\pai}{\operatorname{pai}}
+\newcommand{\map}{\operatorname{map}}
+\newcommand{\ordena}{\operatorname{ord}}
+\newcommand{\Enc}{\operatorname{Enc}}
+\newcommand{\FK}{\operatorname{FK}}
+\newcommand{\PK}{\operatorname{PK}}
+\newcommand{\Val}{\operatorname{Val}}
+\newcommand{\seed}{\operatorname{seed}}
+
+\setlist[itemize]{leftmargin=1.4em,itemsep=0.25em,topsep=0.35em}
+\setlist[enumerate]{leftmargin=1.7em,itemsep=0.3em,topsep=0.4em}
+
+\begin{document}
+\pagenumbering{gobble}
+
+% ============================================================
+% CAPA
+% ============================================================
+\begin{titlepage}
+\centering
+\vspace*{1.2cm}
+{\Large\color{Blue}\textsc{Caderno de formalização -- Volume III}}\\[0.50cm]
+{\huge\bfseries\color{Navy}Plano de contas, escrituração\\[0.15cm]
+e interface Excel}\\[0.65cm]
+{\Large\color{Teal}Especificação da microestrutura contábil parametrizada\\
+para simulação de Diário, Razão e balancete}\\[1.05cm]
+
+\begin{tcolorbox}[width=0.92\textwidth,colback=LightGray,colframe=MidGray,boxrule=0.5pt,arc=2mm]
+\centering
+\large
+\[
+\boxed{
+\Plano_t
+\longrightarrow
+u_t
+\xrightarrow{\cE_t}
+\Lambda_t
+\longrightarrow
+(\Dia_t,\Raz_t)
+\longrightarrow
+b_t
+\xrightarrow{\cG}
+(\BP,\DRE,\DFC,\DVA)
+}
+\]
+\vspace{-1mm}
+\small
+Estrutura contábil parametrizada $\to$ escrituração verificável $\to$\\
+interface física auditável em workbook Excel.
+\end{tcolorbox}
+
+\vfill
+{\large Versão de referência: 1º de setembro de 2026}\\[0.15cm]
+{\small Documento complementar aos Volumes I e II; não constitui parecer contábil ou jurídico.}
+\end{titlepage}
+
+\pagenumbering{roman}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+
+% ============================================================
+\section{Escopo e posição do Volume III no sistema canônico}
+% ============================================================
+
+Os Volumes I e II já estabelecem a constituição abstrata do simulador. O Volume I define o sistema dinâmico contábil-tributário, seus estados, eventos, demonstrações, operadores contábeis e fiscais e a primeira comparação contrafactual. O Volume II adiciona o regime tributário da entidade, seu perfil factual, o vetor mínimo de dados, o seletor de regras efetivas e a camada de proveniência normativa.
+
+O presente Volume III não altera esses objetos. Seu propósito é abrir uma camada que, nos volumes anteriores, permaneceu deliberadamente comprimida: a camada de lançamentos e razão $\Lambda_t$.
+
+\begin{formalizacao}
+O ganho diferencial deste volume é resumido por
+\[
+\boxed{
+\Plano_t,\qquad
+\Lambda_t,\qquad
+\Dia_t,\qquad
+\Raz_t,\qquad
+b_t,\qquad
+\Wb_t.
+}
+\]
+Esses objetos representam, respectivamente, o plano de contas, a família de lançamentos, a visão cronológica da escrituração, a visão por conta, o balancete periódico e a interface física do sistema em Excel.
+\end{formalizacao}
+
+\begin{cuidado}
+O foco deste volume é a \textbf{microestrutura contábil}. A camada tributária continua dependendo dos objetos dos Volumes I e II. Em particular, um Livro Razão ou um balancete não deve ser tratado, em geral, como estatística suficiente para reconstruir todos os tributos: atributos transacionais podem ter sido perdidos na agregação contábil.
+\end{cuidado}
+
+\subsection{Objetivo computacional}
+
+O artefato desejado não é somente uma coleção de números contábeis sintéticos. O objetivo é especificar um pequeno sistema contábil parametrizável, no qual:
+\begin{itemize}
+    \item Python atua como motor de geração, validação, reconciliação e versionamento;
+    \item Excel atua como interface de inspeção, manipulação e auditoria;
+    \item o esquema de dados mantém rastreabilidade até operações, lançamentos e regras;
+    \item a estrutura gerada é verificável contra restrições contábeis e, posteriormente, calibrável contra dados empíricos.
+\end{itemize}
+
+% ============================================================
+\section{Recapitulação integral da estrutura canônica dos Volumes I e II}
+% ============================================================
+
+Esta seção fixa a notação que o Volume III deve respeitar. Ela funciona como uma constituição do sistema: símbolos herdados não serão reutilizados com significado novo.
+
+\subsection{Tempo, estado e transição}
+
+Mantém-se
+\begin{equation}
+\boxed{I_t:=(t,t+1],}
+\end{equation}
+com $x_t\in\mathsf X$ representando o estado econômico-contábil no início de $I_t$. A dinâmica é
+\begin{equation}
+\boxed{x_{t+1}=F(x_t,u_t;\vartheta_t),}
+\label{eq:canonical-dynamics}
+\end{equation}
+com
+\begin{equation}
+\boxed{
+\vartheta_t=(\theta_t^{\mathrm{acct}},\Theta_t^{\mathrm{tax}}),
+\qquad
+\Theta_t^{\mathrm{tax}}=(\theta_{j,t})_{j\in\mathsf J_t}.
+}
+\label{eq:canonical-rules}
+\end{equation}
+
+O Balanço Patrimonial permanece uma projeção do estado:
+\begin{equation}
+\boxed{\BP_t=\pi_{\BP}(x_t).}
+\end{equation}
+
+\subsection{Demonstrações e operadores contábeis}
+
+Os objetos de fluxo mantêm as definições do Volume I:
+\begin{align}
+L_t&=R_t-K_t-E_t+O_t,\\
+\DRE_t&=\cG^{\DRE}(x_t,u_t;\theta_t^{\mathrm{acct}}),\\
+\DFC_t&=\cG^{\DFC}(x_t,u_t;\theta_t^{\mathrm{acct}}),\\
+\DVA_t&=\cG^{\DVA}(x_t,u_t;\theta_t^{\mathrm{acct}}).
+\end{align}
+Aqui, $L_t$ continua significando \textbf{resultado contábil} e $R_t$ continua significando \textbf{receitas}. Esses símbolos não podem ser reaproveitados neste volume para ``lançamentos'' ou ``Razão''.
+
+A fatoração abstrata do operador contábil é preservada:
+\begin{equation}
+\boxed{
+\cG^S=\cA^S\circ\mathcal K^S\circ\mathcal M^{\mathrm{acct}}\circ\mathcal R^{\mathrm{acct}},
+\qquad S\in\{\BP,\DRE,\DFC,\DVA\}.
+}
+\label{eq:canonical-G}
+\end{equation}
+Portanto, $\cA^S$ continua sendo operador de agregação e $\mathcal R^{\mathrm{acct}}$ continua sendo operador de reconhecimento.
+
+\subsection{Operações elementares e coleção de eventos}
+
+A operação externa elementar permanece
+\begin{equation}
+\boxed{
+\cT_{k,t}=(d_{k,t},q_{k,t},v_{k,t},s_{k,t},a_{k,t},p_{k,t},\ell_{k,t},\ldots).
+}
+\label{eq:canonical-event}
+\end{equation}
+Em particular, $s_{k,t}$ é a data/instante e $p_{k,t}$ já designa condições de pagamento/recebimento. O Volume II reserva $h_{k,t}$ para tratamento tributário especial.
+
+A família de eventos é
+\begin{equation}
+\boxed{u_t^{\mathrm{tr}}=(\cT_{k,t})_{k=1}^{n_t},}
+\end{equation}
+e o sistema completo admite
+\begin{equation}
+\boxed{u_t=u_t^{\mathrm{tr}}\sqcup u_t^{\mathrm{adj}},}
+\end{equation}
+com $u_t^{\mathrm{adj}}$ contendo ajustes e eventos internos, como depreciação, provisões e apropriações por competência.
+
+\subsection{Camada tributária canônica}
+
+Para cada tributo $j$, preserva-se
+\begin{equation}
+\boxed{
+\theta_{j,t}=
+(\theta_{j,t}^{\mathrm{inc}},\theta_{j,t}^{\mathrm{base}},\theta_{j,t}^{\mathrm{aliq}},
+\theta_{j,t}^{\mathrm{cred}},\theta_{j,t}^{\mathrm{apur}},\theta_{j,t}^{\mathrm{pag}},\theta_{j,t}^{\mathrm{exc}},\ldots).
+}
+\end{equation}
+Os operadores tributários permanecem
+\begin{align}
+B_{j,k,t}&=\cB_j(\cT_{k,t};\theta_{j,t}),\\
+\tau_{j,k,t}&=\cA_j(\cT_{k,t};\theta_{j,t}),\\
+C_{j,k,t}&=\cC_j(\cT_{k,t};\theta_{j,t}),\\
+D_{j,k,t}&=\cD_j(\cT_{k,t};\theta_{j,t}).
+\end{align}
+Logo, $\cA_j$ continua significando operador de alíquota e não será usado para representar plano de contas.
+
+A apuração não cumulativa simplificada permanece
+\begin{equation}
+\boxed{S_{j,t}^{\mathrm{apur}}=D_{j,t}-C_{j,t}+A_{j,t}^{\mathrm{tax}}.}
+\end{equation}
+O operador de reforma continua denotado por $\mathfrak R$ e, portanto, essa letra também não será utilizada para o Livro Razão.
+
+\subsection{Objetos introduzidos no Volume II}
+
+A configuração tributária é
+\begin{equation}
+\boxed{
+ho_t=(\rho_t^{\mathrm{ent}},\rho_t^{\mathrm{IR}},\rho_t^{\mathrm{cons}},\rho_t^{\mathrm{esp}}),}
+\end{equation}
+o perfil factual da entidade é $\eta_t$, e a admissibilidade de um cenário é testada por
+\begin{equation}
+\boxed{
+\chi_t(\rho;\eta_t,\Theta_t^{\mathrm{tax}})\in\{0,1\}.
+}
+\end{equation}
+
+A regra efetiva é selecionada por
+\begin{equation}
+\boxed{
+\theta_{j,t}^{\mathrm{eff}}=\mathfrak E_{j,t}(\theta_{j,t},\rho_t,\eta_t),
+\qquad
+\Theta_t^{\mathrm{eff}}=(\theta_{j,t}^{\mathrm{eff}})_{j\in\mathsf J_t}.
+}
+\label{eq:effective-rules}
+\end{equation}
+
+O vetor mínimo de entrada é
+\begin{equation}
+\boxed{
+\zeta_t=(x_t^{\min},u_t^{\min},\rho_t,\eta_t),
+}
+\label{eq:zeta-III}
+\end{equation}
+com minimalidade entendida como suficiência funcional para o operador de interesse. Se $H$ é o operador simulado, uma projeção $\Pi$ é suficiente quando existe $\widetilde H$ tal que
+\begin{equation}
+H(u_t)=\widetilde H(\Pi(u_t)).
+\end{equation}
+
+O pacote prático de fontes empresariais permanece
+\begin{equation}
+\boxed{
+Q_t=(\mathrm{ECD}_t,\mathrm{ECF}_t,\mathrm{DocFisc}_t,\mathrm{Cad}_t,\mathrm{Aux}_t),
+}
+\end{equation}
+com normalização
+\begin{equation}
+\boxed{\widehat\zeta_t=\cN_t(Q_t).}
+\end{equation}
+
+Por fim, mantém-se a proveniência normativa
+\begin{equation}
+\boxed{
+\Prov(p)=(\text{fonte},\text{dispositivo},\text{versão},\text{vigência},\text{data de consulta}).
+}
+\end{equation}
+
+\subsection{Arquitetura canônica consolidada antes do Volume III}
+
+Antes de abrir a escrituração, os dois volumes podem ser resumidos por
+\[
+\boxed{
+Q_t
+\xrightarrow{\cN_t}
+\widehat\zeta_t
+\xrightarrow{\mathfrak E_t}
+\Theta_t^{\mathrm{eff}}
+\xrightarrow{H}
+Y_t,
+}
+\]
+onde o ramo contábil ainda tratava $\Lambda_t$ como camada intermediária abstrata:
+\begin{equation}
+\boxed{
+u_t
+\xrightarrow{\mathcal R^{\mathrm{acct}},\mathcal M^{\mathrm{acct}}}
+\Lambda_t
+\xrightarrow{\mathcal K^S,\cA^S}
+S_t.}
+\label{eq:lambda-old}
+\end{equation}
+É precisamente $\Lambda_t$ que será refinada nas próximas seções.
+
+% ============================================================
+\section{Ganho informacional do anexo posterior e reconciliação de notação}
+% ============================================================
+
+A discussão posterior aos Volumes I e II acrescentou uma camada de modelagem orientada à construção de uma escrituração sintética verossímil. O ganho não está em alterar a estrutura canônica, mas em detalhar o caminho entre eventos e saldos contábeis.
+
+\subsection{Distinção entre plano de contas, saldos e base tributária}
+
+O anexo posterior distinguiu corretamente três níveis conceituais que devem permanecer separados:
+\begin{enumerate}
+    \item a \textbf{estrutura das contas};
+    \item os \textbf{valores/saldos contabilizados};
+    \item a \textbf{base tributável} produzida por regras fiscais.
+\end{enumerate}
+
+Neste volume, a primeira camada será representada por $\Plano_t$ e a segunda pelo balancete $b_t$. Assim, em vez de introduzir novos símbolos conflitantes, escrevemos
+\begin{equation}
+\boxed{
+(\Plano_t,b_t,u_t,x_t)
+\xrightarrow[\rho_t,\eta_t]{\Theta_t^{\mathrm{eff}},\,\cB_j}
+B_{j,t}.
+}
+\label{eq:plan-bal-tax}
+\end{equation}
+
+\begin{cuidado}
+A expressão \emph{estrutura de contas} não significa ``conjunto de valores sobre os quais incidem os tributos''. O plano de contas informa como a informação contábil é organizada. A base tributária é um objeto derivado da legislação, do regime e dos fatos relevantes.
+\end{cuidado}
+
+\subsection{Correções das colisões introduzidas nas respostas posteriores}
+
+A tabela a seguir transforma as ideias do anexo em notação compatível com os volumes canônicos.
+
+\begin{longtable}{p{0.22\textwidth} p{0.28\textwidth} p{0.40\textwidth}}
+\toprule
+\textbf{Notação provisória do anexo} & \textbf{Notação canônica no Volume III} & \textbf{Razão da correção}\\
+\midrule
+$\mathcal A$ para estrutura de contas & $\Plano_t$ & $\cA_j$ já é operador de alíquota e $\cA^S$ é agregação.\\
+$L_t$ para lançamentos & $\Lambda_t=(\lambda_{\ell,t})$ & $L_t$ já representa resultado contábil na DRE.\\
+$R_t$ para Livro Razão & $\Raz_t$ & $R_t$ já representa receitas; $\mathfrak R$ é operador de reforma.\\
+$h_\ell$ para cabeçalho & $H^\lambda_{\ell,t}$ & $h_{k,t}$ já representa tratamento tributário especial.\\
+$p_{\ell r}$ para partida & $\psi_{\ell r,t}$ & $p_{k,t}$ já representa condições de pagamento/recebimento na operação.\\
+$r_t$ para valores de contas & $b_t$ & o Volume II já utiliza $b_t$ como balancete/agregado contábil.\\
+\bottomrule
+\end{longtable}
+
+\subsection{Novo encadeamento canônico}
+
+Com a reconciliação, o ramo contábil passa a ser
+\begin{equation}
+\boxed{
+(x_t,u_t,\Plano_t)
+\xrightarrow{\cE_t(\cdot;\theta_t^{\mathrm{acct}})}
+\Lambda_t
+\longrightarrow
+(\Dia_t,\Raz_t)
+\longrightarrow
+b_t
+\xrightarrow{\cG}
+(\BP_{t+1},\DRE_t,\DFC_t,\DVA_t).
+}
+\label{eq:new-accounting-spine}
+\end{equation}
+
+\begin{intuicao}
+O ganho informacional pode ser descrito como uma mudança de resolução. Nos volumes anteriores, $\Lambda_t$ era uma ``caixa-preta'' intermediária. Agora explicitaremos o plano de contas que restringe os códigos admissíveis, a estrutura interna de cada lançamento, suas partidas, as duas visões Diário/Razão e a agregação periódica que produz o balancete.
+\end{intuicao}
+
+% ============================================================
+\section{Evidência estrutural do mundo real: ECD, SPED e normas de escrituração}
+% ============================================================
+
+O objetivo de verossimilhança exige uma referência externa para distinguir convenções inventadas de estruturas efetivamente observadas. Para a camada de escrituração, a fonte estrutural oficial mais útil é a Escrituração Contábil Digital (ECD), componente do Sistema Público de Escrituração Digital (SPED).
+
+\begin{fonte}
+A Receita Federal descreve a ECD como o módulo do SPED que permite a escrituração eletrônica do Livro Diário, Livro Razão, Balancetes Diários, Balanços e fichas de lançamento. O Manual da ECD -- Leiaute 9, atualizado em janeiro de 2026, contém os registros de plano de contas, centros de custos, saldos periódicos, lançamentos, partidas e demonstrações \cite{ECD_PAGE,ECD2026}.
+\end{fonte}
+
+\subsection{Registros oficiais que orientam a spec}
+
+Os registros mais relevantes para o Volume III são:
+\begin{longtable}{p{0.13\textwidth} p{0.28\textwidth} p{0.48\textwidth}}
+\toprule
+\textbf{Registro} & \textbf{Objeto oficial} & \textbf{Uso na especificação}\\
+\midrule
+I050 & Plano de Contas & estrutura hierárquica, conta sintética/analítica, natureza, código e conta superior;\\
+I051 & Plano de Contas Referencial & mapeamento/de-para entre conta analítica da entidade e estrutura referencial;\\
+I075 & Histórico Padronizado & cadastro de históricos reutilizáveis;\\
+I100 & Centro de Custos & dimensão auxiliar de classificação;\\
+I150/I155 & Saldos Periódicos & período, saldo inicial, débitos, créditos, saldo final e indicador D/C;\\
+I200 & Lançamento Contábil & cabeçalho do lançamento: identificador, data, valor e tipo;\\
+I250 & Partidas do Lançamento & conta analítica, centro de custos, valor, débito/crédito, documento, histórico e participante;\\
+I300/I310 & Balancetes Diários & referência adicional para visão de saldos em granularidade diária;\\
+J100/J150 & BP/DRE & evidência de que a escrituração alimenta demonstrações estruturadas.\\
+\bottomrule
+\end{longtable}
+
+\subsection{O que é evidência normativa e o que é escolha de engenharia}
+
+Nem toda coluna necessária ao nosso simulador deve ser confundida com um campo obrigatório da ECD. Adotaremos a seguinte distinção:
+\begin{equation}
+\boxed{
+\text{schema do simulador}
+=
+\text{núcleo compatível com ECD}
+\;\cup\;
+\text{campos de engenharia}.
+}
+\end{equation}
+
+Campos de engenharia podem incluir, por exemplo, identificadores internos de eventos, semente aleatória, versão do gerador, origem sintética/observada, mapeamento para linhas de demonstrações e natureza normal de saldo. Eles devem ser rotulados explicitamente como extensões do modelo.
+
+\subsection{Validade estrutural versus verossimilhança empírica}
+
+\begin{formalizacao}
+Definimos duas condições diferentes:
+\[
+\boxed{
+\text{validade estrutural}
+\neq
+\text{verossimilhança empírica}.
+}
+\]
+A primeira significa satisfazer o schema, as chaves e os invariantes de escrituração. A segunda significa que planos de contas, frequências de lançamentos, valores e combinações observadas parecem plausíveis para entidades reais do arquétipo escolhido.
+\end{formalizacao}
+
+A ECD fornece forte evidência para a primeira condição, mas não identifica, por si só, a distribuição típica de contas e lançamentos de uma empresa de determinado setor. Para a segunda condição serão necessários, em etapa posterior, planos de contas, balancetes, Razões ou exportações de ERP reais e anonimizados, além de exemplos profissionais verificáveis.
+
+% ============================================================
+\section[Plano de contas como objeto parametrizado]{Plano de contas como objeto parametrizado $\Plano_t$}
+% ============================================================
+
+\subsection{Definição abstrata}
+
+Seja $\mathsf C_t$ o conjunto finito de contas vigentes no período:
+\begin{equation}
+\boxed{\mathsf C_t=\{a_{1,t},\ldots,a_{p_t,t}\}.}
+\end{equation}
+
+Em vez de representar cada conta por uma tupla posicional difícil de manter, definimos o plano de contas como uma estrutura relacional:
+\begin{equation}
+\boxed{
+\Plano_t=
+(\mathsf C_t,\cod_t,\nome_t,\nat_t,\tipo_t,\niv_t,\pai_t,\map_t).
+}
+\label{eq:plan-structure}
+\end{equation}
+
+As funções têm os seguintes significados:
+\begin{itemize}
+    \item $\cod_t(a)$: código único da conta;
+    \item $\nome_t(a)$: nome da conta;
+    \item $\nat_t(a)$: natureza/grupo contábil;
+    \item $\tipo_t(a)\in\{S,A\}$: sintética ou analítica;
+    \item $\niv_t(a)\in\N$: nível hierárquico;
+    \item $\pai_t(a)$: conta sintética imediatamente superior, quando existente;
+    \item $\map_t(a)$: mapeamentos auxiliares, por exemplo para demonstrações ou plano referencial.
+\end{itemize}
+
+\begin{fonte}
+O registro I050 da ECD utiliza, entre outros, os campos DT\_ALT, COD\_NAT, IND\_CTA, NIVEL, COD\_CTA, COD\_CTA\_SUP e CTA. O manual afirma que a ECD é baseada no plano de contas utilizado habitualmente pela pessoa jurídica e distingue contas sintéticas e analíticas \cite{ECD2026}.
+\end{fonte}
+
+\subsection{Contas sintéticas e analíticas}
+
+Definimos
+\begin{align}
+\mathsf C_t^{S}&:=\{a\in\mathsf C_t:\tipo_t(a)=S\},\\
+\mathsf C_t^{A}&:=\{a\in\mathsf C_t:\tipo_t(a)=A\}.
+\end{align}
+
+Contas sintéticas agregam subcontas; contas analíticas constituem as folhas operacionais da árvore contábil. Para o núcleo compatível com a ECD, as partidas serão associadas a contas analíticas.
+
+\subsection{Plano como árvore ou floresta enraizada}
+
+A relação $\pai_t$ induz uma estrutura hierárquica. Para toda conta não raiz, exigimos
+\begin{equation}
+\boxed{
+\pai_t(a)\in\mathsf C_t^{S},
+\qquad
+\niv_t(a)=\niv_t(\pai_t(a))+1.
+}
+\label{eq:hierarchy-invariant}
+\end{equation}
+
+Além disso:
+\begin{enumerate}
+    \item $\cod_t$ é injetiva;
+    \item nenhuma conta pode ser sua própria ancestral;
+    \item uma conta de nível superior utilizada como pai deve ser sintética;
+    \item uma conta analítica utilizada em partida deve existir no plano vigente na data do lançamento;
+    \item mudanças de plano devem preservar rastreabilidade entre versões.
+\end{enumerate}
+
+O Manual da ECD registra que o plano com contas sintéticas e analíticas deve conter, no mínimo, quatro níveis para fins da formalidade digital tratada pelo CTG 2001 (R3), e fornece como exemplo a cadeia Ativo $\to$ Ativo Circulante $\to$ Disponível $\to$ Caixa \cite{ECD2026,CFC_NORMAS}.
+
+\subsection{Natureza contábil}
+
+A ECD utiliza códigos de natureza para grupos como Ativo, Passivo, Patrimônio Líquido e Contas de Resultado. O simulador preservará esse núcleo e poderá adicionar um atributo de engenharia
+\begin{equation}
+\delta^{\mathrm{norm}}_t(a)\in\{D,C\},
+\end{equation}
+que representa a orientação de saldo normal usada pelo motor para apresentação e validação. Esse atributo não deve ser confundido com COD\_NAT da ECD.
+
+\subsection{Mapeamento para demonstrações}
+
+Defina, para cada demonstração $S$, um mapeamento
+\begin{equation}
+\boxed{
+\map_t^S:\mathsf C_t\longrightarrow \mathsf L^S\cup\{\varnothing\},
+}
+\label{eq:df-map}
+\end{equation}
+onde $\mathsf L^S$ é o conjunto de linhas/categorias da demonstração. Assim, o plano de contas se torna a ponte entre partidas e agregações do Volume I.
+
+Essa escolha também permite um mapeamento separado para plano referencial, inspirado no registro I051, sem confundir a conta interna da entidade com uma classificação externa.
+
+% ============================================================
+\section[Da operação à escrituração: abertura da camada de lançamentos]{Da operação à escrituração: abertura de $\Lambda_t$}
+% ============================================================
+
+\subsection{Operador de escrituração}
+
+Introduzimos explicitamente
+\begin{equation}
+\boxed{
+\cE_t:
+(x_t,u_t,\Plano_t;\theta_t^{\mathrm{acct}})
+\longmapsto
+\Lambda_t.
+}
+\label{eq:bookkeeping-operator}
+\end{equation}
+
+A família de lançamentos do período é
+\begin{equation}
+\boxed{
+\Lambda_t=(\lambda_{\ell,t})_{\ell=1}^{M_t}.
+}
+\end{equation}
+
+Um evento pode gerar zero, um ou vários lançamentos; vários eventos podem também ser consolidados em um lançamento quando a prática e a regra contábil admitirem. Portanto, não imporemos correspondência $1:1$.
+
+\subsection{Relação de rastreabilidade evento--lançamento}
+
+Defina os índices de eventos $\mathsf K_t:=\{1,\ldots,n_t\}$ e de lançamentos $\mathsf L_t:=\{1,\ldots,M_t\}$. A relação
+\begin{equation}
+\boxed{
+\mathcal V_t\subseteq \mathsf K_t\times\mathsf L_t
+}
+\label{eq:event-entry-link}
+\end{equation}
+indica quais lançamentos derivam de quais eventos.
+
+\begin{intuicao}
+Essa relação evita uma hipótese artificial de cardinalidade. Uma venda pode gerar, por exemplo, um lançamento de receita e outro de baixa do estoque/CMV; um lançamento de folha pode sintetizar muitos eventos operacionais; um ajuste interno pode não possuir documento fiscal de origem.
+\end{intuicao}
+
+\subsection{Estrutura de um lançamento}
+
+Cada lançamento é composto por um cabeçalho e suas partidas:
+\begin{equation}
+\boxed{
+\lambda_{\ell,t}
+=
+\left(H^\lambda_{\ell,t},\Psi_{\ell,t}\right),
+\qquad
+\Psi_{\ell,t}=(\psi_{\ell r,t})_{r=1}^{m_{\ell,t}}.
+}
+\label{eq:entry-object}
+\end{equation}
+
+Um cabeçalho mínimo compatível com a ideia do I200 é
+\begin{equation}
+\boxed{
+H^\lambda_{\ell,t}
+=
+(id_{\ell,t},d^\lambda_{\ell,t},V_{\ell,t},\kappa_{\ell,t},d^{\mathrm{ext}}_{\ell,t},\ldots),
+}
+\end{equation}
+onde $id$ é identificador único, $d^\lambda$ a data de lançamento, $V$ o valor do lançamento, $\kappa$ o tipo e $d^{\mathrm{ext}}$ a data do fato para lançamento extemporâneo quando aplicável.
+
+O Manual da ECD distingue no I200 lançamentos normais, de encerramento de contas de resultado e extemporâneos e exige identificador único, data, valor e indicador de tipo \cite{ECD2026}.
+
+\subsection{Partida contábil}
+
+Uma partida será representada por
+\begin{equation}
+\boxed{
+\psi_{\ell r,t}
+=
+(c_{\ell r,t},cc_{\ell r,t},v^\lambda_{\ell r,t},\delta_{\ell r,t},
+q^{\mathrm{doc}}_{\ell r,t},h^{\mathrm{hist}}_{\ell r,t},a^{\mathrm{part}}_{\ell r,t},\ldots),
+}
+\label{eq:posting}
+\end{equation}
+com:
+\begin{itemize}
+    \item $c_{\ell r,t}$: código da conta analítica;
+    \item $cc_{\ell r,t}$: centro de custos, se aplicável;
+    \item $v^\lambda_{\ell r,t}>0$: valor da partida;
+    \item $\delta_{\ell r,t}\in\{D,C\}$: débito ou crédito;
+    \item $q^{\mathrm{doc}}_{\ell r,t}$: referência documental;
+    \item $h^{\mathrm{hist}}_{\ell r,t}$: histórico;
+    \item $a^{\mathrm{part}}_{\ell r,t}$: participante/contraparte quando necessário.
+\end{itemize}
+
+Esses campos correspondem ao núcleo observado no I250, que contém conta analítica, centro de custos opcional, valor, indicador D/C, referência documental, histórico e participante opcional \cite{ECD2026}.
+
+\subsection{Invariante fundamental da partida dobrada}
+
+Para todo lançamento $\ell$:
+\begin{equation}
+\boxed{
+\sum_{r:\delta_{\ell r,t}=D}v^\lambda_{\ell r,t}
+=
+\sum_{r:\delta_{\ell r,t}=C}v^\lambda_{\ell r,t}
+=
+V_{\ell,t}.
+}
+\label{eq:double-entry}
+\end{equation}
+
+Esse é um invariante estrutural de primeira ordem para o gerador. O Manual da ECD estabelece que o valor do I200 corresponde à soma das partidas com o mesmo indicador D ou C e contém regras de validação das somas de débito e crédito \cite{ECD2026}.
+
+\subsection{Integridade referencial das partidas}
+
+Para toda partida, exigimos
+\begin{align}
+c_{\ell r,t}&\in \cod_t(\mathsf C_t^{A}),\\
+cc_{\ell r,t}&\in\mathsf{CC}_t\cup\{\varnothing\},
+\end{align}
+onde $\mathsf{CC}_t$ é o cadastro de centros de custo. As chaves estrangeiras devem ser válidas na data do lançamento.
+
+% ============================================================
+\section{Diário, Livro Razão e balancete}
+% ============================================================
+
+\subsection{Livro Diário como visão cronológica}
+
+O Livro Diário não introduz nova informação econômica: é uma ordenação de $\Lambda_t$ segundo data e identificador. Defina
+\begin{equation}
+\boxed{
+\Dia_t:=\ordena_{(d^\lambda,id)}(\Lambda_t).
+}
+\label{eq:journal}
+\end{equation}
+
+Essa definição é deliberadamente funcional: o objeto primário permanece $\Lambda_t$; o Diário é uma visão ordenada e apresentável dessa família.
+
+\subsection{Livro Razão como projeção por conta}
+
+Para uma conta analítica $a_i$, definimos
+\begin{equation}
+\boxed{
+\Raz_{i,t}
+:=
+\ordena_{(d^\lambda,id)}
+\left\{
+(\lambda_{\ell,t},\psi_{\ell r,t}):
+ c_{\ell r,t}=\cod_t(a_i)
+\right\}.
+}
+\label{eq:ledger-account}
+\end{equation}
+
+O Livro Razão completo é
+\begin{equation}
+\boxed{
+\Raz_t=(\Raz_{i,t})_{a_i\in\mathsf C_t^{A}}.
+}
+\end{equation}
+
+\subsection{Saldo assinado interno}
+
+Para cálculo computacional, é conveniente utilizar um saldo assinado. Adotaremos, internamente, a convenção ``devedor positivo'':
+\begin{equation}
+\boxed{
+\widetilde b_{i,r}
+=
+\widetilde b_{i,r-1}
++
+D_{i,r}-C_{i,r},
+}
+\label{eq:signed-balance}
+\end{equation}
+onde $D_{i,r}$ e $C_{i,r}$ são os débitos e créditos associados ao passo $r$ na conta $i$.
+
+A apresentação contábil pode então ser codificada por
+\begin{equation}
+\boxed{
+\Enc(\widetilde b)=
+\begin{cases}
+(|\widetilde b|,D),&\widetilde b\ge 0,\\
+(|\widetilde b|,C),&\widetilde b<0.
+\end{cases}
+}
+\label{eq:balance-encoding}
+\end{equation}
+
+\begin{cuidado}
+A convenção de saldo assinado é uma escolha de engenharia interna. Ela não altera a natureza contábil da conta. A interface Excel deve exibir, quando conveniente, valor absoluto e indicador D/C, compatíveis com a forma utilizada nos saldos periódicos da ECD.
+\end{cuidado}
+
+\subsection{Balancete periódico}
+
+Seja $J_t$ um conjunto de subperíodos $\tau$ dentro do horizonte. Para cada conta analítica $a_i$ e período $\tau$, definimos
+\begin{equation}
+\boxed{
+ b_{i,\tau}
+=
+(s^{\mathrm{ini}}_{i,\tau},\delta^{\mathrm{ini}}_{i,\tau},
+D_{i,\tau},C_{i,\tau},
+ s^{\mathrm{fin}}_{i,\tau},\delta^{\mathrm{fin}}_{i,\tau}).
+}
+\label{eq:trial-balance-row}
+\end{equation}
+O balancete é
+\begin{equation}
+\boxed{b_t=(b_{i,\tau})_{i,\tau}.}
+\end{equation}
+
+O formato é inspirado em I150/I155: período, saldo inicial, indicador D/C, total de débitos, total de créditos, saldo final e indicador D/C. O manual prevê periodicidade no máximo mensal e regras de continuidade entre saldos \cite{ECD2026}.
+
+\subsection{Invariantes de saldo}
+
+No espaço assinado,
+\begin{equation}
+\boxed{
+\widetilde b_{i,\tau}^{\mathrm{fin}}
+=
+\widetilde b_{i,\tau}^{\mathrm{ini}}
++D_{i,\tau}-C_{i,\tau}.
+}
+\label{eq:trial-balance-invariant}
+\end{equation}
+Além disso, para períodos consecutivos,
+\begin{equation}
+\boxed{
+\widetilde b_{i,\tau+1}^{\mathrm{ini}}
+=
+\widetilde b_{i,\tau}^{\mathrm{fin}},
+}
+\label{eq:continuity}
+\end{equation}
+salvo mudança de plano formalmente tratada ou outro evento de transição explicitado.
+
+\subsection{Fechamento do ramo contábil}
+
+A arquitetura do Volume I pode agora ser refinada sem alterar o significado de $\cG^S$:
+\begin{equation}
+\boxed{
+(x_t,u_t,\Plano_t)
+\xrightarrow{\cE_t}
+\Lambda_t
+\xrightarrow{\mathrm{views}}
+(\Dia_t,\Raz_t,b_t)
+\xrightarrow{\cG^S}
+S_t,
+\qquad S\in\{\BP,\DRE,\DFC,\DVA\}.
+}
+\label{eq:accounting-final}
+\end{equation}
+
+O ganho é interpretativo e computacional: $\cG^S$ deixa de parecer uma agregação direta dos eventos e passa a operar sobre saldos/partidas produzidos por uma escrituração explicitamente validada.
+
+% ============================================================
+\section{Workbook Excel como interface física do modelo lógico}
+% ============================================================
+
+\subsection{Modelo lógico e interface física}
+
+A distinção central é
+\begin{equation}
+\boxed{
+\text{modelo lógico}
+\neq
+\text{interface física}.
+}
+\end{equation}
+O modelo lógico é composto por $\Plano_t$, $u_t$, $\Lambda_t$, $\Raz_t$, $b_t$ e pelos demais objetos canônicos. O workbook Excel é uma representação tabular desses objetos para uso humano.
+
+\begin{fonte}
+O próprio Manual da ECD 2026 contém uma seção específica sobre abertura de arquivo ECD no Excel e descreve a importação do arquivo delimitado por ``|'' para colunas, com uso de filtros, somas, cálculos e funções. Isso não define nossa arquitetura, mas fornece evidência direta de interoperabilidade prática entre escrituração digital e Excel \cite{ECD2026}.
+\end{fonte}
+
+\subsection{Workbook como coleção de tabelas}
+
+Definimos
+\begin{equation}
+\boxed{
+\Wb_t=
+(\mathbf T^{\mathrm{cfg}},\mathbf T^{\mathrm{ent}},\mathbf T^{\mathrm{pc}},
+\mathbf T^{\mathrm{ev}},\mathbf T^{\mathrm{lct}},\mathbf T^{\mathrm{part}},
+\mathbf T^{\mathrm{raz}},\mathbf T^{\mathrm{bal}},\mathbf T^{\mathrm{map}},\ldots).
+}
+\label{eq:workbook}
+\end{equation}
+Cada $\mathbf T$ deve ser implementada como uma tabela Excel nomeada, com colunas tipadas, chaves estáveis e validações explícitas.
+
+\subsection{Classes de abas}
+
+Adotaremos três classes funcionais:
+\begin{itemize}
+    \item \textbf{entrada/configuração}: editáveis pelo usuário;
+    \item \textbf{núcleo gerado}: produzido pelo motor e não editado manualmente em fluxo normal;
+    \item \textbf{saída/relatório}: derivado, recalculável e auditável.
+\end{itemize}
+
+\begin{longtable}{p{0.18\textwidth} p{0.16\textwidth} p{0.18\textwidth} p{0.31\textwidth}}
+\toprule
+\textbf{Aba} & \textbf{Objeto} & \textbf{Classe} & \textbf{Função}\\
+\midrule
+README & metadados & entrada & versão da spec, legenda, regras de edição e trilha de origem;\\
+CONFIG & $\Omega^{\mathrm{sim}}$ & entrada & horizonte, semente, moeda, escala e parâmetros computacionais;\\
+ENTIDADE & $(\eta_t,\rho_t)$ & entrada & atributos do arquétipo e configuração tributária quando aplicável;\\
+\makecell[l]{PLANO\_\\ CONTAS} & $\Plano_t$ & entrada/gerada & cadastro hierárquico das contas;\\
+\makecell[l]{CENTROS\_\\ CUSTO} & $\mathsf{CC}_t$ & opcional & cadastro auxiliar compatível com I100;\\
+\makecell[l]{PARTICI-\\ PANTES} & cadastro & opcional & contrapartes/participantes quando necessários;\\
+HISTORICOS & cadastro & opcional & históricos padronizados, inspirado em I075;\\
+EVENTOS & $u_t$ & entrada/gerada & eventos econômicos normalizados;\\
+\makecell[l]{LANCA-\\ MENTOS} & $H^\lambda_{\ell,t}$ & gerada & cabeçalhos dos lançamentos;\\
+PARTIDAS & $\psi_{\ell r,t}$ & gerada & partidas D/C dos lançamentos;\\
+\makecell[l]{VINCULO\\ EVENTO\_LCTO} & $\mathcal V_t$ & gerada & relação muitos-para-muitos evento--lançamento;\\
+DIARIO & $\Dia_t$ & saída & visão cronológica da escrituração;\\
+RAZAO & $\Raz_t$ & saída & visão por conta, filtrável;\\
+BALANCETE & $b_t$ & saída & saldos periódicos e movimentos;\\
+\makecell[l]{MAPEAMENTO\\ DF} & $\map_t^S$ & entrada & de-para entre contas e linhas das demonstrações;\\
+\makecell[l]{BP/DRE/\\ DFC/DVA} & $S_t$ & saída & demonstrações derivadas;\\
+VALIDACOES & testes & saída & invariantes, chaves e reconciliações;\\
+\makecell[l]{PROVE-\\ NIENCIA} & $\Prov$ & governança & origem de dados, parâmetros e versões;\\
+FISCAL\_* & Volume II & reservado & parâmetros, apuração e cenários tributários em etapa posterior.\\
+\bottomrule
+\end{longtable}
+
+\subsection{Por que uma única aba RAZAO}
+
+No MVP, não criaremos uma aba por conta. Uma tabela única $\mathbf T^{\mathrm{raz}}$, contendo $\cod_t(a)$, nome, data, lançamento, débito, crédito, histórico e saldo, é mais estável e escalável. Filtros, segmentações ou tabelas dinâmicas do Excel podem produzir a visão de cada conta sem multiplicar o número de abas.
+
+\subsection{Esquema relacional e chaves}
+
+As principais restrições de integridade do workbook são:
+\begin{align}
+\PK(\mathrm{PLANO\_CONTAS})&=\mathrm{COD\_CTA},\\
+\PK(\mathrm{LANCAMENTOS})&=\mathrm{NUM\_LCTO},\\
+\FK(\mathrm{PARTIDAS.NUM\_LCTO})&\to\mathrm{LANCAMENTOS.NUM\_LCTO},\\
+\FK(\mathrm{PARTIDAS.COD\_CTA})&\to\mathrm{PLANO\_CONTAS.COD\_CTA},\\
+\FK(\mathrm{PLANO\_CONTAS.COD\_CTA\_SUP})&\to\mathrm{PLANO\_CONTAS.COD\_CTA}.
+\end{align}
+Se centros de custos e participantes forem usados, suas chaves também devem ser validadas.
+
+\subsection{Fonte de verdade e editabilidade}
+
+A regra operacional recomendada é:
+\begin{equation}
+\boxed{
+\text{editar entradas}
+\longrightarrow
+\text{regenerar núcleo}
+\longrightarrow
+\text{recalcular saídas};
+}
+\end{equation}
+e não editar diretamente Razão, balancete ou demonstrações.
+
+Essa disciplina evita que o workbook se torne um arquivo sem proveniência, no qual uma célula manual altera um relatório sem alterar as partidas que deveriam sustentá-lo.
+
+% ============================================================
+\section{Contrato mínimo das tabelas do workbook}
+% ============================================================
+
+\subsection{PLANO\_CONTAS}
+
+O núcleo recomendado é:
+\begin{longtable}{p{0.18\textwidth} p{0.16\textwidth} p{0.15\textwidth} p{0.34\textwidth}}
+\toprule
+\textbf{Coluna} & \textbf{Tipo} & \textbf{Origem} & \textbf{Regra}\\
+\midrule
+DT\_ALT & data & ECD/I050 & data de inclusão/alteração;\\
+COD\_NAT & texto/código & ECD/I050 & natureza da conta/grupo;\\
+IND\_CTA & enum S/A & ECD/I050 & sintética ou analítica;\\
+NIVEL & inteiro & ECD/I050 & nível crescente na hierarquia;\\
+COD\_CTA & texto & ECD/I050 & chave primária;\\
+COD\_CTA\_SUP & texto/nulo & ECD/I050 & conta sintética superior;\\
+CTA & texto & ECD/I050 & nome da conta;\\
+\makecell[l]{NAT\_SALDO\\ NORMAL} & enum D/C & engenharia & orientação usada pelo motor;\\
+COD\_DF & texto/nulo & engenharia & linha da demonstração de destino;\\
+ATIVA & booleano & engenharia & vigência operacional no cenário;\\
+ORIGEM & enum & governança & observada, sintética, template ou ajustada.\\
+\bottomrule
+\end{longtable}
+
+\subsection{LANCAMENTOS}
+
+\begin{longtable}{p{0.18\textwidth} p{0.16\textwidth} p{0.15\textwidth} p{0.34\textwidth}}
+\toprule
+\textbf{Coluna} & \textbf{Tipo} & \textbf{Origem} & \textbf{Regra}\\
+\midrule
+NUM\_LCTO & texto & I200 & identificador único;\\
+DT\_LCTO & data & I200 & data do lançamento;\\
+VL\_LCTO & decimal & I200 & valor do lançamento;\\
+IND\_LCTO & enum N/E/X & I200 & normal, encerramento ou extemporâneo;\\
+\makecell[l]{DT\_LCTO\\ EXT} & data/nulo & I200 & data do fato em lançamento extemporâneo;\\
+ID\_GERACAO & texto & engenharia & lote/execução Python que criou o registro;\\
+\makecell[l]{VERSAO\\ REGRA} & texto & engenharia & versão da política contábil implementada.\\
+\bottomrule
+\end{longtable}
+
+\subsection{PARTIDAS}
+
+\begin{longtable}{p{0.18\textwidth} p{0.16\textwidth} p{0.15\textwidth} p{0.34\textwidth}}
+\toprule
+\textbf{Coluna} & \textbf{Tipo} & \textbf{Origem} & \textbf{Regra}\\
+\midrule
+ID\_PARTIDA & texto & engenharia & chave interna da linha;\\
+NUM\_LCTO & texto & I200/I250 & chave estrangeira do lançamento;\\
+COD\_CTA & texto & I250 & conta analítica válida;\\
+COD\_CCUS & texto/nulo & I250 & centro de custos;\\
+VL\_DC & decimal & I250 & valor positivo da partida;\\
+IND\_DC & enum D/C & I250 & natureza da partida;\\
+NUM\_ARQ & texto/nulo & I250 & referência documental;\\
+\makecell[l]{COD\_HIST\\ PAD} & texto/nulo & I250 & histórico padronizado;\\
+HIST & texto & I250 & histórico completo/complementar;\\
+COD\_PART & texto/nulo & I250 & participante;\\
+\makecell[l]{ID\_\\ ORIGEM} & texto/nulo & engenharia & ponte para evento/documento fonte.\\
+\bottomrule
+\end{longtable}
+
+\subsection{BALANCETE}
+
+\begin{longtable}{p{0.18\textwidth} p{0.16\textwidth} p{0.15\textwidth} p{0.34\textwidth}}
+\toprule
+\textbf{Coluna} & \textbf{Tipo} & \textbf{Origem} & \textbf{Regra}\\
+\midrule
+DT\_INI & data & I150 & início do período;\\
+DT\_FIN & data & I150 & fim do período;\\
+COD\_CTA & texto & I155 & conta analítica;\\
+COD\_CCUS & texto/nulo & I155 & centro de custos;\\
+VL\_SLD\_INI & decimal & I155 & saldo inicial absoluto;\\
+IND\_DC\_INI & enum D/C & I155 & orientação do saldo inicial;\\
+VL\_DEB & decimal & I155 & débitos do período;\\
+VL\_CRED & decimal & I155 & créditos do período;\\
+VL\_SLD\_FIN & decimal & I155 & saldo final absoluto;\\
+IND\_DC\_FIN & enum D/C & I155 & orientação do saldo final.\\
+\bottomrule
+\end{longtable}
+
+% ============================================================
+\section{Responsabilidades de Python e do Excel}
+% ============================================================
+
+\subsection{Python como motor}
+
+O motor Python deve concentrar operações difíceis de auditar manualmente quando repetidas em escala:
+\begin{enumerate}
+    \item gerar ou importar $\Plano_t$;
+    \item gerar eventos $u_t$ segundo o arquétipo escolhido;
+    \item aplicar $\cE_t$ e materializar $\Lambda_t$;
+    \item validar chaves, hierarquia e partida dobrada;
+    \item construir Diário, Razão e balancete;
+    \item recalcular demonstrações e testes de consistência;
+    \item escrever o workbook e, idealmente, relê-lo para validar a materialização;
+    \item registrar semente, versão do código e proveniência.
+\end{enumerate}
+
+\subsection{Excel como interface}
+
+Excel deve concentrar funções de inspeção e manipulação controlada:
+\begin{itemize}
+    \item filtros e segmentações;
+    \item edição de parâmetros declaradamente editáveis;
+    \item fórmulas simples e verificáveis;
+    \item pivôs e reconciliações visuais;
+    \item leitura por profissionais de contabilidade sem dependência de Python.
+\end{itemize}
+
+Para o MVP, recomenda-se o formato $\texttt{.xlsx}$, sem macros, para reduzir dependências e manter portabilidade. Macros ou $\texttt{.xlsm}$ podem ser avaliados apenas quando houver requisito funcional claro.
+
+\subsection{Configuração de simulação}
+
+Para separar o estado econômico de parâmetros puramente computacionais, introduzimos
+\begin{equation}
+\boxed{
+\Omega^{\mathrm{sim}}
+=
+(I_{\min},I_{\max},\seed,N_{\mathrm{eventos}},\gamma_{\mathrm{escala}},\mathrm{versao},\ldots).
+}
+\end{equation}
+Esse objeto pertence à aba CONFIG, mas não ao estado econômico $x_t$ nem ao perfil factual $\eta_t$.
+
+% ============================================================
+\section{Validações e testes de aceitação do Volume III}
+% ============================================================
+
+A spec deve declarar invariantes que possam ser executados automaticamente. O resultado da simulação só é admissível se todos os testes estruturais obrigatórios forem satisfeitos.
+
+\subsection{Validações do plano de contas}
+
+\begin{enumerate}
+    \item unicidade de COD\_CTA;
+    \item inexistência de ciclos na relação de conta superior;
+    \item coerência de NIVEL com COD\_CTA\_SUP;
+    \item conta superior sintética;
+    \item contas utilizadas em partidas são analíticas e existentes;
+    \item mapeamentos para demonstrações referenciam categorias válidas.
+\end{enumerate}
+
+\subsection{Validações de lançamentos}
+
+Para cada $\lambda_{\ell,t}$:
+\begin{align}
+\sum_D VL\_DC&=\sum_C VL\_DC,\\
+VL\_LCTO&=\sum_D VL\_DC=\sum_C VL\_DC,\\
+NUM\_LCTO&\text{ é único.}
+\end{align}
+
+\subsection{Validações do Razão e balancete}
+
+\begin{enumerate}
+    \item soma dos débitos/créditos por conta no Razão = totais no balancete;
+    \item saldo final calculado = saldo final informado;
+    \item continuidade entre períodos consecutivos;
+    \item soma global de débitos = soma global de créditos no período;
+    \item BP derivado satisfaz a identidade patrimonial, dentro da tolerância numérica definida.
+\end{enumerate}
+
+\subsection{Validações de proveniência}
+
+Cada lote sintético deve registrar
+\begin{equation}
+\boxed{
+\Prov^{\mathrm{sim}}
+=(\seed,\mathrm{versao\_codigo},\mathrm{versao\_spec},\mathrm{template},\mathrm{data\_geracao}).
+}
+\end{equation}
+Para dados observados, a proveniência deve identificar arquivo, período, versão da extração e transformação aplicada.
+
+% ============================================================
+\section{Exemplo end-to-end: de eventos ao Razão e às demonstrações}
+% ============================================================
+
+Esta seção ilustra a arquitetura sem introduzir tributação. Considere uma entidade criada com seis contas analíticas relevantes:
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Código & Conta & Natureza normal\\
+\midrule
+1.1.01 & Caixa & D\\
+1.1.02 & Clientes & D\\
+1.1.03 & Estoques & D\\
+2.3.01 & Capital Social & C\\
+3.1.01 & Receita de Vendas & C\\
+4.1.01 & Custo das Mercadorias Vendidas & D\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Eventos econômicos}
+
+No período, ocorrem quatro eventos:
+\begin{enumerate}
+    \item aporte de capital de R\$ 100.000 em caixa;
+    \item compra à vista de estoque por R\$ 30.000;
+    \item venda a prazo por R\$ 50.000, com custo do estoque vendido de R\$ 20.000;
+    \item recebimento de R\$ 30.000 do cliente.
+\end{enumerate}
+
+O terceiro evento é útil porque demonstra que um único evento econômico pode demandar dois lançamentos contábeis distintos.
+
+\subsection{Lançamentos e partidas}
+
+\begin{longtable}{p{0.10\textwidth} p{0.16\textwidth} p{0.28\textwidth} p{0.10\textwidth} p{0.18\textwidth}}
+\toprule
+\textbf{Lcto} & \textbf{Conta} & \textbf{Histórico} & \textbf{D/C} & \textbf{Valor (R\$)}\\
+\midrule
+L001 & Caixa & integralização de capital & D & 100.000\\
+L001 & Capital Social & integralização de capital & C & 100.000\\
+L002 & Estoques & compra de mercadorias & D & 30.000\\
+L002 & Caixa & compra de mercadorias & C & 30.000\\
+L003 & Clientes & venda a prazo & D & 50.000\\
+L003 & Receita de Vendas & venda a prazo & C & 50.000\\
+L004 & CMV & baixa do custo da venda & D & 20.000\\
+L004 & Estoques & baixa do custo da venda & C & 20.000\\
+L005 & Caixa & recebimento de cliente & D & 30.000\\
+L005 & Clientes & recebimento de cliente & C & 30.000\\
+\bottomrule
+\end{longtable}
+
+Para cada lançamento, os débitos e créditos são iguais. No agregado:
+\[
+\sum VL_D=230.000=\sum VL_C.
+\]
+
+\subsection{Razão por conta}
+
+Os saldos finais em convenção usual são:
+\begin{align*}
+\mathrm{Caixa}&=100.000\ D,\\
+\mathrm{Clientes}&=20.000\ D,\\
+\mathrm{Estoques}&=10.000\ D,\\
+\mathrm{Capital\ Social}&=100.000\ C,\\
+\mathrm{Receita\ de\ Vendas}&=50.000\ C,\\
+\mathrm{CMV}&=20.000\ D.
+\end{align*}
+
+\subsection{Balancete e demonstrações}
+
+A soma de saldos devedores é
+\[
+100.000+20.000+10.000+20.000=150.000,
+\]
+e a soma de saldos credores é
+\[
+100.000+50.000=150.000.
+\]
+
+A DRE simplificada produz
+\[
+L_t=50.000-20.000=30.000.
+\]
+Em uma apresentação econômica simplificada, após reconhecer o resultado do período no patrimônio líquido para fechar a posição patrimonial, os ativos somam R\$ 130.000 e o patrimônio líquido econômico também soma R\$ 130.000:
+\[
+100.000\;\text{Caixa}+20.000\;\text{Clientes}+10.000\;\text{Estoques}
+=
+100.000\;\text{Capital}+30.000\;\text{Resultado}.
+\]
+
+\begin{formalizacao}
+O exemplo verifica a cadeia completa:
+\[
+\boxed{
+\Plano_t
+\to
+u_t
+\to
+\Lambda_t
+\to
+\Raz_t
+\to
+b_t
+\to
+(\BP_t,\DRE_t).
+}
+\]
+A futura camada tributária não altera esses lançamentos por definição; ela lê os fatos e a escrituração segundo $\Theta_t^{\mathrm{eff}}$, podendo criar lançamentos tributários adicionais quando a política contábil exigir.
+\end{formalizacao}
+
+% ============================================================
+\section{Conexão com o simulador tributário dos Volumes I e II}
+% ============================================================
+
+A microestrutura contábil não substitui o vetor mínimo $\zeta_t$. Ela acrescenta uma fonte estruturada para recuperar parte de $x_t^{\min}$ e de $u_t^{\min}$ e torna auditável a conexão com as demonstrações.
+
+\subsection{Arquitetura conjunta}
+
+Uma arquitetura compatível com os três volumes é
+\begin{equation}
+\boxed{
+Q_t
+\xrightarrow{\cN_t}
+(\zeta_t,\Plano_t,\Lambda_t,\Raz_t,b_t)
+\xrightarrow{\mathfrak E_t}
+\Theta_t^{\mathrm{eff}}
+\xrightarrow{H}
+Y_t.
+}
+\label{eq:all-volumes}
+\end{equation}
+
+No ramo contábil:
+\[
+(\Plano_t,u_t)\xrightarrow{\cE_t}\Lambda_t\to\Raz_t\to b_t\to S_t.
+\]
+No ramo tributário:
+\[
+(x_t^{\min},u_t^{\min},\rho_t,\eta_t;\Theta_t^{\mathrm{eff}})\xrightarrow{H^{\mathrm{tax}}}Y_t^{\mathrm{tax}}.
+\]
+
+\subsection{Por que o Razão não elimina a granularidade fiscal}
+
+Se o operador contábil $\mathcal A^{\mathrm{acct}}$ leva eventos a balancete,
+\[
+\mathcal A^{\mathrm{acct}}:u_t\mapsto b_t,
+\]
+pode ocorrer
+\[
+\mathcal A^{\mathrm{acct}}(u_t)=\mathcal A^{\mathrm{acct}}(u'_t)
+\quad\text{e}\quad
+H^{\mathrm{tax}}(u_t)\ne H^{\mathrm{tax}}(u'_t).
+\]
+Nesse caso, nem $b_t$ nem uma visão puramente agregada do Razão identificam o resultado tributário. O workbook deve, portanto, preservar a aba EVENTOS e referências documentais mesmo depois que os lançamentos forem gerados.
+
+\subsection{Ponto de integração futuro}
+
+A primeira integração tributária recomendada é adicionar, sem alterar o núcleo contábil:
+\begin{itemize}
+    \item FISCAL\_PARAM: parâmetros e proveniência de $\Theta_t^{\mathrm{eff}}$;
+    \item FISCAL\_OPERACOES: atributos fiscais consumidos por $\cB_j,\cA_j,\cC_j,\cD_j$;
+    \item FISCAL\_APURACAO: $S_{j,t}^{\mathrm{apur}}$, $T_{j,t}^{\mathrm{recolher}}$, $C_{j,t}^{\mathrm{saldo}}$;
+    \item CENARIOS: combinações admissíveis de $(\rho,\Theta)$ e saídas contrafactuais.
+\end{itemize}
+
+% ============================================================
+\section{Camada de verossimilhança e calibração empírica}
+% ============================================================
+
+Depois de satisfazer a validade estrutural, o projeto precisará calibrar como uma empresa plausível se comporta. Introduzimos, apenas como camada futura,
+\begin{equation}
+\boxed{
+\Gamma=(\Gamma_{\Plano},\Gamma_u,\Gamma_{\cE}),
+}
+\end{equation}
+onde:
+\begin{itemize}
+    \item $\Gamma_{\Plano}$ controla arquétipos de planos de contas;
+    \item $\Gamma_u$ controla frequência, sazonalidade, valores e dependências entre eventos;
+    \item $\Gamma_{\cE}$ controla padrões de escrituração e consolidação compatíveis com a política contábil.
+\end{itemize}
+
+Esses parâmetros não devem ser escolhidos apenas por intuição. A etapa empírica deve utilizar planos de contas e Razões reais anonimizados, exportações de ERP ou amostras profissionais verificadas. A ECD fornece o envelope estrutural; o corpus empírico fornece a distribuição observada dentro desse envelope.
+
+\begin{cuidado}
+Um gerador pode passar todos os testes de partida dobrada, hierarquia e reconciliação e, ainda assim, produzir uma empresa claramente artificial. Validade matemática e plausibilidade empresarial são critérios diferentes e devem ser avaliados separadamente.
+\end{cuidado}
+
+% ============================================================
+\section{Especificação do MVP do Volume III}
+% ============================================================
+
+\subsection{Escopo obrigatório}
+
+O primeiro MVP deve ser capaz de:
+\begin{enumerate}
+    \item construir um plano de contas hierárquico coerente;
+    \item gerar um conjunto finito de eventos de um arquétipo empresarial simples;
+    \item converter eventos em lançamentos e partidas por regras declaradas;
+    \item garantir partida dobrada e integridade referencial;
+    \item derivar Diário, Razão e balancete;
+    \item derivar pelo menos BP e DRE;
+    \item materializar tudo em $\texttt{.xlsx}$ com tabelas separadas;
+    \item produzir uma aba VALIDACOES sem erros obrigatórios;
+    \item reproduzir exatamente o mesmo workbook para a mesma semente e versão de configuração, salvo metadados temporais explicitamente excluídos da comparação.
+\end{enumerate}
+
+\subsection{Fora do MVP}
+
+Não são requisitos da primeira versão:
+\begin{itemize}
+    \item reproduzir integralmente o arquivo textual ECD;
+    \item cobrir todas as regras do SPED;
+    \item implementar todos os CPCs;
+    \item simular todos os regimes tributários;
+    \item imitar a distribuição real de qualquer setor sem corpus de calibração;
+    \item substituir ERP, software contábil ou PGE da ECD.
+\end{itemize}
+
+\subsection{Critério de aceitação}
+
+Definimos um vetor de testes
+\begin{equation}
+\boxed{
+\mathcal V^{\mathrm{MVP}}
+=(V_{\Plano},V_{\Lambda},V_{\Raz},V_b,V_{\mathrm{DF}},V_{\mathrm{ref}},V_{\mathrm{rep}}).
+}
+\end{equation}
+O cenário é estruturalmente aceito se
+\begin{equation}
+\boxed{
+\prod_{r} \ind\{V_r=\mathrm{ok}\}=1.
+}
+\end{equation}
+
+% ============================================================
+\section{Arquitetura consolidada do Volume III}
+% ============================================================
+
+\begin{center}
+\resizebox{0.98\textwidth}{!}{%
+\begin{tikzpicture}[
+  node distance=7mm and 9mm,
+  box/.style={draw,rounded corners=2mm,align=center,minimum height=9mm,inner sep=4pt},
+  inp/.style={box,fill=LightBlue,draw=Blue,text width=30mm},
+  op/.style={box,fill=LightTeal,draw=Teal,text width=34mm},
+  mid/.style={box,fill=LightGray,draw=MidGray,text width=34mm},
+  gov/.style={box,fill=LightGold,draw=Gold,text width=34mm},
+  arr/.style={-{Latex[length=2.2mm]},thick,draw=Navy}
+]
+\node[inp] (plan) {$\Plano_t$\\plano de contas};
+\node[inp,below=of plan] (u) {$u_t$\\eventos};
+\node[op,right=of plan,yshift=-8mm] (e) {$\cE_t$\\escrituração};
+\node[mid,right=of e] (lam) {$\Lambda_t$\\lançamentos/partidas};
+\node[mid,right=of lam,yshift=9mm] (dia) {$\Dia_t$\\visão cronológica};
+\node[mid,right=of lam,yshift=-9mm] (raz) {$\Raz_t$\\visão por conta};
+\node[mid,right=of raz] (bal) {$b_t$\\balancete};
+\node[op,right=of bal] (g) {$\cG^S$\\agregação};
+\node[inp,right=of g] (dfs) {$\BP,\DRE,\DFC,\DVA$};
+\node[gov,below=18mm of lam] (wb) {$\Wb_t$\\interface Excel};
+\node[gov,below=of g] (tax) {$\zeta_t,\rho_t,\eta_t,\Theta_t^{eff}$\\camada tributária};
+\draw[arr] (plan) -- (e);
+\draw[arr] (u) -- (e);
+\draw[arr] (e) -- (lam);
+\draw[arr] (lam) -- (dia);
+\draw[arr] (lam) -- (raz);
+\draw[arr] (raz) -- (bal);
+\draw[arr] (bal) -- (g);
+\draw[arr] (g) -- (dfs);
+\draw[arr] (lam) -- (wb);
+\draw[arr] (raz) -- (wb);
+\draw[arr] (bal) -- (wb);
+\draw[arr] (u.south) |- (tax.west);
+\draw[arr] (bal.south) |- (tax.west);
+\end{tikzpicture}}
+\end{center}
+
+\begin{formalizacao}
+A especificação consolidada pode ser lida como quatro contratos:
+\begin{enumerate}
+    \item \textbf{contrato estrutural}: $\Plano_t$ define quais contas e relações são admissíveis;
+    \item \textbf{contrato de escrituração}: $\cE_t$ transforma eventos em $\Lambda_t$ respeitando partida dobrada;
+    \item \textbf{contrato de apresentação}: Diário, Razão, balancete e demonstrações são derivados, não editados independentemente;
+    \item \textbf{contrato de interface}: $\Wb_t$ materializa os objetos lógicos com chaves, validações e proveniência explícitas.
+\end{enumerate}
+\end{formalizacao}
+
+% ============================================================
+\section{Roteiro de implementação recomendado}
+% ============================================================
+
+\subsection{Fase 0 -- schema e testes}
+
+Implementar apenas tipos, colunas, chaves e validadores; popular com um exemplo determinístico pequeno, como o da Seção anterior.
+
+\subsection{Fase 1 -- gerador contábil determinístico}
+
+Construir templates de eventos e regras de escrituração sem aleatoriedade. O objetivo é validar $\cE_t$, $\Lambda_t$, $\Raz_t$ e $b_t$.
+
+\subsection{Fase 2 -- materialização Excel}
+
+Gerar o workbook, aplicar tabelas nomeadas, validações de dados, congelamento de cabeçalhos, filtros e formatação. Reabrir o arquivo via Python e reconciliar valores.
+
+\subsection{Fase 3 -- geração estocástica controlada}
+
+Adicionar $\Omega^{\mathrm{sim}}$ e distribuições paramétricas, mantendo uma semente explícita e testes de reprodutibilidade.
+
+\subsection{Fase 4 -- calibração empírica}
+
+Estimar $\Gamma$ a partir de fontes reais anonimizadas e introduzir critérios quantitativos de verossimilhança.
+
+\subsection{Fase 5 -- integração tributária}
+
+Conectar $\Theta_t^{\mathrm{eff}}$, $\rho_t$, $\eta_t$ e os operadores dos Volumes I/II ao núcleo contábil já validado.
+
+% ============================================================
+\appendix
+\section{Tabela canônica de símbolos dos três volumes}
+% ============================================================
+
+\small
+\begin{longtable}{p{0.16\textwidth} p{0.15\textwidth} p{0.60\textwidth}}
+\toprule
+\textbf{Símbolo} & \textbf{Origem} & \textbf{Significado canônico}\\
+\midrule
+$I_t$ & I & período $(t,t+1]$;\\
+$x_t$ & I & estado econômico-contábil;\\
+$u_t$ & I & família de eventos/operações e ajustes;\\
+$\cT_{k,t}$ & I & operação/evento elementar;\\
+$\vartheta_t$ & I & regras contábeis e tributárias;\\
+$\theta_t^{acct}$ & I & regras contábeis;\\
+$\Theta_t^{tax}$ & I & conjunto de regras tributárias;\\
+$\cG^S$ & I & operador de demonstração $S$;\\
+$\Lambda_t$ & I/III & camada de lançamentos, agora explicitada;\\
+$L_t$ & I & resultado contábil, não lançamentos;\\
+$R_t$ & I & receitas, não Livro Razão;\\
+$\cA_j$ & I & operador de alíquota;\\
+$\cA^S$ & I & operador de agregação;\\
+$\mathfrak R$ & I & operador de reforma;\\
+$\rho_t$ & II & configuração tributária da entidade;\\
+$\eta_t$ & II & perfil factual da entidade;\\
+$\zeta_t$ & II & vetor mínimo de entrada;\\
+$\mathfrak E_{j,t}$ & II & seletor de regra efetiva;\\
+$\Prov$ & II & proveniência normativa/dados;\\
+$Q_t$ & II & pacote de fontes empresariais;\\
+$\Plano_t$ & III & plano de contas parametrizado;\\
+$\lambda_{\ell,t}$ & III & lançamento contábil;\\
+$H^\lambda_{\ell,t}$ & III & cabeçalho do lançamento;\\
+$\psi_{\ell r,t}$ & III & partida contábil;\\
+$\mathcal V_t$ & III & vínculo evento--lançamento;\\
+$\Dia_t$ & III & visão cronológica da escrituração;\\
+$\Raz_t$ & III & Livro Razão, visão por conta;\\
+$b_t$ & II/III & balancete/agregado periódico de saldos;\\
+$\Wb_t$ & III & workbook Excel, interface física;\\
+$\Omega^{sim}$ & III & configuração computacional da simulação;\\
+$\Gamma$ & III & camada futura de calibração de verossimilhança.\\
+\bottomrule
+\end{longtable}
+\normalsize
+
+% ============================================================
+\section{Matriz de ganho informacional e integridade}
+% ============================================================
+
+\begin{longtable}{p{0.24\textwidth} p{0.22\textwidth} p{0.39\textwidth}}
+\toprule
+\textbf{Tema} & \textbf{Situação antes do Volume III} & \textbf{Resultado consolidado}\\
+\midrule
+Plano de contas & mencionado ou usado como agregado & objeto $\Plano_t$ com hierarquia, atributos e invariantes;\\
+$\Lambda_t$ & camada abstrata & família explícita de lançamentos e partidas;\\
+Diário/Razão & referências práticas & visões funcionais bem definidas de $\Lambda_t$;\\
+Balancete & agregado $b_t$ no Volume II & schema periódico compatível com saldo inicial, D/C, débitos, créditos e saldo final;\\
+Rastreabilidade & eventos e documentos separados & relação $\mathcal V_t$ evento--lançamento e chaves do workbook;\\
+Partida dobrada & princípio implícito & invariante computável por lançamento;\\
+Excel & interface desejada & objeto $\Wb_t$ com abas, chaves, classes de editabilidade e fonte de verdade;\\
+Realismo & requisito qualitativo & separação validade estrutural/verossimilhança empírica e futura $\Gamma$;\\
+Integração fiscal & Razão potencialmente usado como entrada & preservada a não identificação tributária do Volume II; eventos granulares continuam disponíveis;\\
+Notação & colisões nas respostas posteriores & $\Plano_t,\Lambda_t,\Raz_t,\psi$ preservam símbolos canônicos dos Volumes I/II.\\
+\bottomrule
+\end{longtable}
+
+% ============================================================
+\section{Checklist de implementação do workbook}
+% ============================================================
+
+\begin{enumerate}
+    \item Definir versão da spec e semente da simulação.
+    \item Validar $\Plano_t$ antes de gerar qualquer partida.
+    \item Gerar EVENTOS com identificadores únicos.
+    \item Aplicar $\cE_t$ e criar LANCAMENTOS/PARTIDAS.
+    \item Executar teste de partida dobrada para cada NUM\_LCTO.
+    \item Validar todas as chaves estrangeiras.
+    \item Derivar DIARIO e RAZAO das partidas, sem edição manual.
+    \item Derivar BALANCETE e reconciliar movimentos.
+    \item Aplicar MAPEAMENTO\_DF e gerar demonstrações.
+    \item Executar identidade patrimonial e reconciliações de fluxo.
+    \item Registrar PROVENIENCIA e versões.
+    \item Salvar $\texttt{.xlsx}$ e reler para teste de integridade física.
+\end{enumerate}
+
+% ============================================================
+\section{Siglas adicionais}
+% ============================================================
+
+\begin{longtable}{p{0.20\textwidth} p{0.70\textwidth}}
+\toprule
+\textbf{Sigla} & \textbf{Significado}\\
+\midrule
+ECD & Escrituração Contábil Digital;\\
+ECF & Escrituração Contábil Fiscal;\\
+SPED & Sistema Público de Escrituração Digital;\\
+CFC & Conselho Federal de Contabilidade;\\
+ITG & Interpretação Técnica Geral;\\
+CTG & Comunicado Técnico Geral;\\
+ERP & Enterprise Resource Planning, sistema integrado de gestão empresarial;\\
+MVP & Minimum Viable Product, produto mínimo viável.\\
+\bottomrule
+\end{longtable}
+
+% ============================================================
+\section{Referências normativas, contábeis e operacionais}
+% ============================================================
+
+\small
+\begin{thebibliography}{99}
+
+\bibitem{ECD_PAGE}
+RECEITA FEDERAL / SPED. \textbf{Escrituração Contábil Digital -- ECD}. Página institucional. Disponível em: \url{https://www.gov.br/sped/pt-br/assuntos/escrituracoes-digitais/ecd}. Acesso em: 1 set. 2026.
+
+\bibitem{ECD2026}
+RECEITA FEDERAL / SPED. \textbf{Manual de Orientação do Leiaute 9 da Escrituração Contábil Digital (ECD)}. Anexo ao ADE Cofis nº 1/2026. Atualização: janeiro de 2026. Disponível em: \url{https://www.gov.br/sped/pt-br/assuntos/escrituracoes-digitais/ecd/manuais-e-documentos-tecnicos/manual_de_orientacao_da_ecd_leiaute_9_janeiro_2026.pdf}. Acesso em: 1 set. 2026.
+
+\bibitem{CFC_NORMAS}
+CONSELHO FEDERAL DE CONTABILIDADE. \textbf{Normas Específicas}. Inclui ITG 2000 (R1) -- Escrituração Contábil e CTG 2001 (R3) -- formalidades da escrituração contábil em forma digital para fins do SPED. Disponível em: \url{https://cfc.org.br/tecnica/normas-brasileiras-de-contabilidade/normas-especificas/}. Acesso em: 1 set. 2026.
+
+\bibitem{ECF_PAGE}
+RECEITA FEDERAL / SPED. \textbf{Escrituração Contábil Fiscal -- ECF}. Descreve informações fiscais e operacionais para IRPJ/CSLL e recuperação de saldos e contas da ECD. Disponível em: \url{https://www.gov.br/sped/pt-br/assuntos/escrituracoes-digitais/ecf}. Acesso em: 1 set. 2026.
+
+\bibitem{ECF2026}
+RECEITA FEDERAL / SPED. \textbf{Manual da ECF -- Leiaute 12}. Atualização de 23 de julho de 2026. Disponível em: \url{https://www.gov.br/sped/pt-br/assuntos/escrituracoes-digitais/ecf/manuais-e-documentos-tecnicos/manual_ecf_leiaute_12_20_05_2026_ac_2025_sit_esp_2026.pdf}. Acesso em: 1 set. 2026.
+
+\bibitem{CPC00}
+COMITÊ DE PRONUNCIAMENTOS CONTÁBEIS. \textbf{CPC 00 (R2) -- Estrutura Conceitual para Relatório Financeiro}. Disponível em: \url{https://www.cpc.org.br/Arquivos/Documentos/573_CPC00%28R2%29.pdf}. Acesso em: 1 set. 2026.
+
+\bibitem{CPC03}
+COMITÊ DE PRONUNCIAMENTOS CONTÁBEIS. \textbf{CPC 03 (R2) -- Demonstração dos Fluxos de Caixa}. Disponível em: \url{https://www.cpc.org.br/Arquivos/Documentos/183_CPC_03_R2_rev%2021.pdf}. Acesso em: 1 set. 2026.
+
+\bibitem{CPC09}
+COMITÊ DE PRONUNCIAMENTOS CONTÁBEIS. \textbf{CPC 09 (R1) -- Demonstração do Valor Adicionado}. Disponível em: \url{https://www.cpc.org.br/Arquivos/Documentos/632_CPC%2009%20R1.pdf}. Acesso em: 1 set. 2026.
+
+\bibitem{CPC26}
+COMITÊ DE PRONUNCIAMENTOS CONTÁBEIS. \textbf{CPC 26 (R1) -- Apresentação das Demonstrações Contábeis}. Disponível em: \url{https://www.cpc.org.br/Arquivos/Documentos/312_CPC_26_R1_rev%2023.pdf}. Acesso em: 1 set. 2026.
+
+\end{thebibliography}
+\normalsize
+
+\end{document}

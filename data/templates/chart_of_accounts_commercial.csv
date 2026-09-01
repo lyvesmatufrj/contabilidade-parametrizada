@@ -1,0 +1,49 @@
+DT_ALT,COD_NAT,IND_CTA,NIVEL,COD_CTA,COD_CTA_SUP,CTA,NAT_SALDO_NORMAL,COD_DF,ATIVA,ORIGEM
+2026-01-01,01,S,1,1,,Ativo,D,,true,template
+2026-01-01,01,S,2,1.1,1,Ativo Circulante,D,,true,template
+2026-01-01,01,S,3,1.1.01,1.1,Disponibilidades,D,,true,template
+2026-01-01,01,A,4,1.1.01.01,1.1.01,Caixa,D,BP_CAIXA,true,template
+2026-01-01,01,A,4,1.1.01.02,1.1.01,Bancos Conta Movimento,D,BP_BANCOS,true,template
+2026-01-01,01,S,3,1.1.02,1.1,Clientes,D,,true,template
+2026-01-01,01,A,4,1.1.02.01,1.1.02,Clientes,D,BP_CLIENTES,true,template
+2026-01-01,01,S,3,1.1.03,1.1,Estoques,D,,true,template
+2026-01-01,01,A,4,1.1.03.01,1.1.03,Mercadorias para Revenda,D,BP_ESTOQUES,true,template
+2026-01-01,01,S,3,1.1.04,1.1,Tributos a Recuperar,D,,true,template
+2026-01-01,01,A,4,1.1.04.01,1.1.04,Tributos a Recuperar,D,BP_TRIBUTOS_RECUPERAR,true,template
+2026-01-01,01,S,2,1.2,1,Ativo Não Circulante,D,,true,template
+2026-01-01,01,S,3,1.2.01,1.2,Imobilizado,D,,true,template
+2026-01-01,01,A,4,1.2.01.01,1.2.01,Móveis e Equipamentos,D,BP_IMOBILIZADO,true,template
+2026-01-01,01,A,4,1.2.01.02,1.2.01,(-) Depreciação Acumulada,C,BP_DEPRECIACAO_ACUM,true,template
+2026-01-01,02,S,1,2,,Passivo,C,,true,template
+2026-01-01,02,S,2,2.1,2,Passivo Circulante,C,,true,template
+2026-01-01,02,S,3,2.1.01,2.1,Fornecedores,C,,true,template
+2026-01-01,02,A,4,2.1.01.01,2.1.01,Fornecedores,C,BP_FORNECEDORES,true,template
+2026-01-01,02,S,3,2.1.02,2.1,Obrigações Trabalhistas,C,,true,template
+2026-01-01,02,A,4,2.1.02.01,2.1.02,Salários a Pagar,C,BP_OBRIG_TRAB,true,template
+2026-01-01,02,S,3,2.1.03,2.1,Obrigações Tributárias,C,,true,template
+2026-01-01,02,A,4,2.1.03.01,2.1.03,Tributos a Recolher,C,BP_OBRIG_TRIB,true,template
+2026-01-01,02,S,2,2.2,2,Passivo Não Circulante,C,,true,template
+2026-01-01,02,S,3,2.2.01,2.2,Empréstimos e Financiamentos,C,,true,template
+2026-01-01,02,A,4,2.2.01.01,2.2.01,Empréstimos Bancários,C,BP_EMPRESTIMOS,true,template
+2026-01-01,03,S,1,3,,Patrimônio Líquido,C,,true,template
+2026-01-01,03,S,2,3.1,3,Capital,C,,true,template
+2026-01-01,03,S,3,3.1.01,3.1,Capital Social,C,,true,template
+2026-01-01,03,A,4,3.1.01.01,3.1.01,Capital Social Integralizado,C,BP_CAPITAL,true,template
+2026-01-01,03,S,2,3.2,3,Resultados Acumulados,C,,true,template
+2026-01-01,03,S,3,3.2.01,3.2,Lucros ou Prejuízos Acumulados,C,,true,template
+2026-01-01,03,A,4,3.2.01.01,3.2.01,Lucros ou Prejuízos Acumulados,C,BP_RESULTADOS_ACUM,true,template
+2026-01-01,04,S,1,4,,Contas de Resultado,C,,true,template
+2026-01-01,04,S,2,4.1,4,Receitas,C,,true,template
+2026-01-01,04,S,3,4.1.01,4.1,Receita Bruta,C,,true,template
+2026-01-01,04,A,4,4.1.01.01,4.1.01,Receita de Vendas,C,DRE_RECEITA_VENDAS,true,template
+2026-01-01,04,S,2,4.2,4,Custos,D,,true,template
+2026-01-01,04,S,3,4.2.01,4.2,Custo das Mercadorias Vendidas,D,,true,template
+2026-01-01,04,A,4,4.2.01.01,4.2.01,Custo das Mercadorias Vendidas,D,DRE_CMV,true,template
+2026-01-01,04,S,2,4.3,4,Despesas Operacionais,D,,true,template
+2026-01-01,04,S,3,4.3.01,4.3,Despesas Administrativas,D,,true,template
+2026-01-01,04,A,4,4.3.01.01,4.3.01,Salários e Encargos,D,DRE_DESP_SALARIOS,true,template
+2026-01-01,04,A,4,4.3.01.02,4.3.01,Aluguéis,D,DRE_DESP_ALUGUEL,true,template
+2026-01-01,04,A,4,4.3.01.03,4.3.01,Energia e Utilidades,D,DRE_DESP_UTILIDADES,true,template
+2026-01-01,04,A,4,4.3.01.04,4.3.01,Depreciação,D,DRE_DESP_DEPRECIACAO,true,template
+2026-01-01,04,S,3,4.3.02,4.3,Despesas Financeiras,D,,true,template
+2026-01-01,04,A,4,4.3.02.01,4.3.02,Juros e Encargos Financeiros,D,DRE_DESP_FINANCEIRA,true,template

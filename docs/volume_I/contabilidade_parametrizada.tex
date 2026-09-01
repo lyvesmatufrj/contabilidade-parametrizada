@@ -1,0 +1,1388 @@
+\documentclass[11pt,a4paper]{article}
+
+% ------------------------------------------------------------
+% Codificacao, idioma e tipografia
+% ------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{geometry}
+\geometry{top=2.2cm,bottom=2.2cm,left=2.25cm,right=2.25cm}
+\usepackage{setspace}
+\setstretch{1.07}
+
+% ------------------------------------------------------------
+% Matematica
+% ------------------------------------------------------------
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{bm}
+\usepackage{dsfont}
+\usepackage{array,booktabs,longtable,tabularx,multirow}
+\usepackage{enumitem}
+\usepackage{siunitx}
+\sisetup{output-decimal-marker={,},group-separator={.}}
+
+% ------------------------------------------------------------
+% Graficos e caixas
+% ------------------------------------------------------------
+\usepackage{xcolor}
+\definecolor{Navy}{HTML}{18324A}
+\definecolor{Blue}{HTML}{2D628F}
+\definecolor{Teal}{HTML}{2D7A78}
+\definecolor{Gold}{HTML}{B8862C}
+\definecolor{Red}{HTML}{9B3A36}
+\definecolor{LightBlue}{HTML}{EDF4F9}
+\definecolor{LightTeal}{HTML}{EEF7F5}
+\definecolor{LightGold}{HTML}{FBF6EA}
+\definecolor{LightRed}{HTML}{FAEFEE}
+\definecolor{LightGray}{HTML}{F4F5F6}
+\definecolor{MidGray}{HTML}{7A838A}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds,shapes.geometric,matrix}
+\usepackage[most]{tcolorbox}
+
+\newtcolorbox{intuicao}[1][]{
+  enhanced,breakable,colback=LightBlue,colframe=Blue,boxrule=0.6pt,
+  arc=1.5mm,left=2mm,right=2mm,top=1.5mm,bottom=1.5mm,
+  title=Intuição,#1}
+\newtcolorbox{formalizacao}[1][]{
+  enhanced,breakable,colback=LightTeal,colframe=Teal,boxrule=0.6pt,
+  arc=1.5mm,left=2mm,right=2mm,top=1.5mm,bottom=1.5mm,
+  title=Formalização,#1}
+\newtcolorbox{cuidado}[1][]{
+  enhanced,breakable,colback=LightRed,colframe=Red,boxrule=0.6pt,
+  arc=1.5mm,left=2mm,right=2mm,top=1.5mm,bottom=1.5mm,
+  title=Precisão conceitual,#1}
+\newtcolorbox{fonte}[1][]{
+  enhanced,breakable,colback=LightGold,colframe=Gold,boxrule=0.6pt,
+  arc=1.5mm,left=2mm,right=2mm,top=1.5mm,bottom=1.5mm,
+  title=Base normativa,#1}
+
+% ------------------------------------------------------------
+% Cabecalho, hiperlinks, secoes
+% ------------------------------------------------------------
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{MidGray}Parametrização matemática de objetos contábeis e tributários}
+\fancyhead[R]{\small\color{MidGray}\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+\setlength{\headheight}{14pt}
+
+\usepackage{titlesec}
+\titleformat{\section}{\Large\bfseries\color{Navy}}{\thesection}{0.75em}{}
+\titleformat{\subsection}{\large\bfseries\color{Blue}}{\thesubsection}{0.65em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{Teal}}{\thesubsubsection}{0.55em}{}
+\titlespacing*{\section}{0pt}{1.8em}{0.7em}
+\titlespacing*{\subsection}{0pt}{1.35em}{0.5em}
+
+\usepackage[hidelinks]{hyperref}
+\hypersetup{
+  pdftitle={Parametrizacao matematica de objetos contabeis e tributarios},
+  pdfsubject={Contabilidade, tributacao e Reforma Tributaria do Consumo},
+  pdfauthor={Caderno tecnico},
+  colorlinks=true,
+  linkcolor=Navy,
+  urlcolor=Blue,
+  citecolor=Teal
+}
+\usepackage[nameinlink,noabbrev]{cleveref}
+
+% ------------------------------------------------------------
+% Comandos
+% ------------------------------------------------------------
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\ind}{\mathds{1}}
+\newcommand{\BP}{\mathrm{BP}}
+\newcommand{\DRE}{\mathrm{DRE}}
+\newcommand{\DFC}{\mathrm{DFC}}
+\newcommand{\DVA}{\mathrm{DVA}}
+\newcommand{\CBS}{\mathrm{CBS}}
+\newcommand{\IBS}{\mathrm{IBS}}
+\newcommand{\IRPJ}{\mathrm{IRPJ}}
+\newcommand{\CSLL}{\mathrm{CSLL}}
+\newcommand{\ICMS}{\mathrm{ICMS}}
+\newcommand{\ISS}{\mathrm{ISS}}
+\newcommand{\IPI}{\mathrm{IPI}}
+\newcommand{\PIS}{\mathrm{PIS}}
+\newcommand{\COFINS}{\mathrm{Cofins}}
+\newcommand{\IS}{\mathrm{IS}}
+\newcommand{\VA}{\mathrm{VA}}
+\newcommand{\cT}{\mathcal{T}}
+\newcommand{\cB}{\mathcal{B}}
+\newcommand{\cG}{\mathcal{G}}
+\newcommand{\cA}{\mathcal{A}}
+\newcommand{\cC}{\mathcal{C}}
+\newcommand{\cD}{\mathcal{D}}
+\newcommand{\cM}{\mathcal{M}}
+\newcommand{\cK}{\mathcal{K}}
+\newcommand{\cR}{\mathcal{R}}
+\newcommand{\vct}[1]{\bm{#1}}
+\newcommand{\periodo}[1]{I_{#1}:=(#1,#1+1]}
+\newcommand{\dd}{\,\mathrm{d}}
+
+\setlist[itemize]{leftmargin=1.4em,itemsep=0.25em,topsep=0.35em}
+\setlist[enumerate]{leftmargin=1.7em,itemsep=0.3em,topsep=0.4em}
+
+\begin{document}
+\pagenumbering{gobble}
+
+% ============================================================
+% CAPA
+% ============================================================
+\begin{titlepage}
+\centering
+\vspace*{1.3cm}
+{\Large\color{Blue}\textsc{Caderno de formalização}}\\[0.55cm]
+{\huge\bfseries\color{Navy}Objetos contábeis e tributários\\[0.18cm]
+como um sistema dinâmico discreto}\\[0.65cm]
+{\Large\color{Teal}Uma parametrização para matemáticos da contabilidade,\\
+das demonstrações financeiras e da tributação do consumo}\\[1.3cm]
+
+\begin{tcolorbox}[width=0.90\textwidth,colback=LightGray,colframe=MidGray,boxrule=0.5pt,arc=2mm]
+\centering
+\large
+\[
+\boxed{x_{t+1}=F(x_t,u_t;\vartheta_t)}
+\]
+\vspace{-1mm}
+\small
+Estado $\to$ operações/eventos $\to$ regras contábeis e tributárias $\to$ novo estado,\\
+com projeções para demonstrações financeiras e obrigações tributárias.
+\end{tcolorbox}
+
+\vfill
+{\large Versão de referência: 25 de agosto de 2026}\\[0.15cm]
+{\small Documento didático e técnico; não constitui parecer contábil ou jurídico.}
+\end{titlepage}
+
+\pagenumbering{roman}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+
+% ============================================================
+\section{Objetivo, escopo e filosofia de modelagem}
+% ============================================================
+
+Este texto organiza um conjunto de objetos contábeis e tributários por meio de uma linguagem matemática comum. O objetivo não é substituir a terminologia técnica da contabilidade ou do direito tributário, mas construir uma \emph{interface formal} que permita responder, com clareza, a quatro perguntas:
+
+\begin{enumerate}
+    \item qual é o estado econômico-contábil de uma entidade em um instante $t$;
+    \item quais operações e eventos ocorrem no intervalo seguinte;
+    \item quais regras transformam esses eventos em lançamentos, demonstrações e tributos;
+    \item como uma mudança normativa, como a Reforma Tributária do Consumo, altera esse operador de transformação.
+\end{enumerate}
+
+\begin{intuicao}
+A contabilidade pode ser lida como um sistema de \textbf{estado e fluxo}. O balanço patrimonial descreve uma posição em um instante; as demais demonstrações selecionam e agregam aspectos do caminho percorrido entre dois instantes. A tributação adiciona outra camada: uma mesma operação econômica é submetida a regras que determinam incidência, base, alíquota, crédito, débito, apuração e pagamento.
+\end{intuicao}
+
+\subsection{Convenção temporal}
+
+Adotaremos tempo discreto $t\in\N$ e o período de relatório
+\[
+\periodo{t}.
+\]
+Assim, $x_t$ é o estado no início do período $I_t$ e $x_{t+1}$ é o estado ao final do mesmo período.
+
+A dinâmica geral será escrita como
+\begin{equation}
+\boxed{x_{t+1}=F(x_t,u_t;\vartheta_t),}
+\label{eq:dinamica-geral}
+\end{equation}
+em que:
+\begin{itemize}
+    \item $x_t\in\mathsf X$ é o estado econômico-contábil da entidade;
+    \item $u_t$ é a coleção finita de operações e eventos relevantes ocorridos em $I_t$;
+    \item $\vartheta_t$ reúne as regras aplicáveis no período;
+    \item $F$ é o operador de transição de estado.
+\end{itemize}
+
+Para separar domínios normativos, será útil decompor
+\begin{equation}
+\boxed{\vartheta_t=\bigl(\theta_t^{\mathrm{acct}},\Theta_t^{\mathrm{tax}}\bigr),
+\qquad
+\Theta_t^{\mathrm{tax}}=(\theta_{j,t})_{j\in\mathsf J_t}.}
+\label{eq:vartheta}
+\end{equation}
+Aqui, $\theta_t^{\mathrm{acct}}$ representa as regras contábeis; $\theta_{j,t}$ representa as regras do tributo $j$; e $\mathsf J_t$ é o conjunto de tributos relevantes no período.
+
+\begin{cuidado}
+A notação é uma modelagem didática. Objetos como $F$, $\cB_j$ ou $\cG^{\DRE}$ não são nomes oficiais empregados pelas normas. Eles funcionam como operadores abstratos para tornar explícito o mecanismo que a linguagem jurídica e contábil descreve verbalmente.
+\end{cuidado}
+
+% ============================================================
+\section{Primeira camada: estado, estoque e fluxo}
+% ============================================================
+
+\subsection{Estado e estoque}
+
+Um \textbf{estoque} é uma quantidade definida em um instante. Se $S(t)$ é uma variável de estoque, escrevemos
+\[
+S_t:=S(t).
+\]
+Exemplos contábeis são caixa, estoques de mercadorias, contas a receber, dívidas e patrimônio líquido.
+
+Definiremos $x_t$ como um vetor de estado suficientemente rico:
+\begin{equation}
+\boxed{x_t=(x_{1,t},\ldots,x_{p,t})\in\mathsf X.}
+\end{equation}
+Ele pode conter saldos patrimoniais e outros estados auxiliares necessários à dinâmica contábil. O balanço patrimonial não será identificado com o estado completo; será tratado como uma projeção:
+\begin{equation}
+\boxed{\BP_t=\pi_{\BP}(x_t).}
+\label{eq:bp-projecao}
+\end{equation}
+
+Em sua forma estrutural mais conhecida,
+\begin{equation}
+\boxed{A_t=P_t+PL_t,}
+\label{eq:equacao-patrimonial}
+\end{equation}
+em que $A_t$ são ativos, $P_t$ são passivos e $PL_t$ é o patrimônio líquido.
+
+\begin{fonte}
+O CPC 00 (R2) fornece a estrutura conceitual dos elementos das demonstrações contábeis; o CPC 26 (R1) disciplina a apresentação das demonstrações e inclui, entre outras, o balanço patrimonial, a demonstração do resultado e a demonstração dos fluxos de caixa \cite{CPC00,CPC26}.
+\end{fonte}
+
+\subsection{Fluxo}
+
+Um \textbf{fluxo} descreve algo acumulado ao longo de um intervalo. Se $f(s)$ é uma taxa instantânea, o fluxo acumulado em $I_t$ é
+\[
+F_t=\int_t^{t+1} f(s)\dd s.
+\]
+Em tempo discreto, a ideia operacional é
+\begin{equation}
+\boxed{S_{t+1}-S_t=F_t^{\text{entrada}}-F_t^{\text{saída}}+A_t^{\text{ajuste}}.}
+\label{eq:estoque-fluxo}
+\end{equation}
+
+Logo, uma demonstração de fluxo não é, estritamente, uma derivada do estado. Ela é mais próxima de uma \textbf{integral seletiva de fluxos} ocorridos no período.
+
+\begin{formalizacao}
+A analogia contínua é
+\[
+\dot x(s)=f(x(s),u(s);\vartheta(s)),
+\qquad
+x_{t+1}-x_t=\int_t^{t+1}\dot x(s)\dd s.
+\]
+A DRE, a DFC e a DVA não são $\dot x$; cada uma seleciona componentes econômicos diferentes da trajetória.
+\end{formalizacao}
+
+% ============================================================
+\section{Segunda camada: as quatro demonstrações no mesmo formalismo}
+% ============================================================
+
+\subsection{Balanço Patrimonial -- BP}
+
+O \textbf{Balanço Patrimonial (BP)} responde à pergunta: \emph{qual é a posição patrimonial da entidade no instante $t$?}
+
+No formalismo,
+\[
+\BP_t=\pi_{\BP}(x_t),
+\]
+portanto o BP é um \textbf{objeto de estoque}.
+
+\subsection{Demonstração do Resultado do Exercício -- DRE}
+
+A \textbf{Demonstração do Resultado do Exercício (DRE)} organiza receitas e despesas reconhecidas segundo o regime de competência durante $I_t$.
+
+Em um esquema mínimo,
+\begin{equation}
+\boxed{L_t=R_t-K_t-E_t+O_t,}
+\label{eq:dre-simplificada}
+\end{equation}
+em que:
+\begin{itemize}
+    \item $R_t$ = receitas reconhecidas;
+    \item $K_t$ = custos associados aos bens ou serviços vendidos/prestados;
+    \item $E_t$ = demais despesas;
+    \item $O_t$ = outros resultados líquidos necessários ao esquema adotado;
+    \item $L_t$ = resultado contábil do período.
+\end{itemize}
+
+Abstratamente,
+\begin{equation}
+\boxed{\DRE_t=\cG^{\DRE}(x_t,u_t;\theta_t^{\mathrm{acct}}).}
+\end{equation}
+
+\subsection{Demonstração dos Fluxos de Caixa -- DFC}
+
+A \textbf{Demonstração dos Fluxos de Caixa (DFC)} seleciona operações que efetivamente alteram caixa e equivalentes de caixa e as classifica, em regra, em atividades:
+\[
+\text{operacionais},\qquad \text{de investimento},\qquad \text{de financiamento}.
+\]
+
+Se $CASH_t$ denota caixa e equivalentes de caixa,
+\begin{equation}
+\boxed{\Delta CASH_t=CASH_{t+1}-CASH_t
+=FC_t^{\mathrm{op}}+FC_t^{\mathrm{inv}}+FC_t^{\mathrm{fin}}+A_t^{\mathrm{cash}},}
+\label{eq:dfc}
+\end{equation}
+onde $A_t^{\mathrm{cash}}$ representa ajustes de reconciliação exigidos pela apresentação aplicável, como efeitos cambiais quando pertinentes.
+
+Abstratamente,
+\begin{equation}
+\boxed{\DFC_t=\cG^{\DFC}(x_t,u_t;\theta_t^{\mathrm{acct}}).}
+\end{equation}
+
+\begin{fonte}
+O CPC 03 (R2) estabelece a apresentação dos fluxos de caixa e distingue atividades operacionais, de investimento e de financiamento. O pronunciamento também deixa explícito, no método indireto, que itens sem efeito de caixa e variações de contas operacionais ajustam o resultado até o fluxo de caixa operacional \cite{CPC03}.
+\end{fonte}
+
+\subsection{Demonstração do Valor Adicionado -- DVA}
+
+A \textbf{Demonstração do Valor Adicionado (DVA)} responde a uma pergunta diferente da DRE: \emph{quanta riqueza foi criada pela entidade e como foi distribuída?}
+
+Uma decomposição didática coerente com o CPC 09 (R1) é:
+\begin{align}
+\VA_t^{\mathrm{bruto}} &= R_t^{\DVA}-I_t^{\mathrm{terc}},\\
+\VA_t^{\mathrm{liq}} &= \VA_t^{\mathrm{bruto}}-Ret_t,\\
+\VA_t^{\mathrm{dist}} &= \VA_t^{\mathrm{liq}}+\VA_t^{\mathrm{transf}},
+\end{align}
+em que $I_t^{\mathrm{terc}}$ são insumos adquiridos de terceiros, $Ret_t$ representa retenções como depreciação/amortização/exaustão, e $\VA_t^{\mathrm{transf}}$ é valor adicionado recebido em transferência.
+
+A distribuição pode ser esquematizada por
+\begin{equation}
+\boxed{\VA_t^{\mathrm{dist}}=W_t+G_t+K_t^{(3)}+K_t^{(p)},}
+\label{eq:dva-distribuicao}
+\end{equation}
+em que:
+\begin{itemize}
+    \item $W_t$ = pessoal;
+    \item $G_t$ = governo, por impostos, taxas e contribuições;
+    \item $K_t^{(3)}$ = remuneração de capitais de terceiros;
+    \item $K_t^{(p)}$ = remuneração de capitais próprios.
+\end{itemize}
+
+Abstratamente,
+\begin{equation}
+\boxed{\DVA_t=\cG^{\DVA}(x_t,u_t;\theta_t^{\mathrm{acct}}).}
+\end{equation}
+
+\begin{fonte}
+O CPC 09 (R1) afirma que a DVA evidencia a riqueza criada pela entidade e sua distribuição no período e que seus dados são obtidos, em grande maioria, principalmente a partir da demonstração do resultado \cite{CPC09}.
+\end{fonte}
+
+\subsection{Mapa temporal das demonstrações}
+
+\begin{center}
+\begin{tikzpicture}[
+  node distance=9mm and 15mm,
+  box/.style={draw,rounded corners=2mm,minimum height=9mm,align=center,inner sep=5pt},
+  state/.style={box,fill=LightBlue,draw=Blue,text width=28mm},
+  flow/.style={box,fill=LightTeal,draw=Teal,text width=35mm},
+  arrow/.style={-{Latex[length=2.5mm]},thick,draw=Navy}
+]
+\node[state] (xt) {$x_t$\\estado inicial};
+\node[flow,right=22mm of xt] (ut) {$u_t$ em $I_t$\\operações e eventos};
+\node[state,right=22mm of ut] (xt1) {$x_{t+1}$\\estado final};
+\draw[arrow] (xt) -- (ut);
+\draw[arrow] (ut) -- node[above,font=\small] {$F(\cdot;\vartheta_t)$} (xt1);
+
+\node[box,fill=LightGray,draw=MidGray,below=12mm of xt] (bp0) {$\BP_t=\pi_{\BP}(x_t)$};
+\node[flow,below=12mm of ut] (flows) {$\DRE_t,\ \DFC_t,\ \DVA_t$\\projeções do período};
+\node[box,fill=LightGray,draw=MidGray,below=12mm of xt1] (bp1) {$\BP_{t+1}=\pi_{\BP}(x_{t+1})$};
+\draw[arrow] (xt) -- (bp0);
+\draw[arrow] (ut) -- (flows);
+\draw[arrow] (xt1) -- (bp1);
+\end{tikzpicture}
+\end{center}
+
+\begin{cuidado}
+O conjunto completo de demonstrações contábeis pode incluir outros componentes, como demonstração das mutações do patrimônio líquido, demonstração do resultado abrangente e notas explicativas. O presente caderno restringe o núcleo formal a BP, DRE, DFC e DVA porque esses foram os objetos centrais da modelagem.
+\end{cuidado}
+
+% ============================================================
+\section[Terceira camada: operação elementar e vetor bruto u t]{Terceira camada: operação elementar e vetor bruto $u_t$}
+% ============================================================
+
+\subsection{Operação elementar como registro estruturado}
+
+Uma operação externa elementar será representada por
+\begin{equation}
+\boxed{\cT_{k,t}=(d_{k,t},q_{k,t},v_{k,t},s_{k,t},a_{k,t},p_{k,t},\ell_{k,t},\ldots),}
+\label{eq:transacao-array}
+\end{equation}
+com, por exemplo:
+
+\begin{longtable}{p{0.16\textwidth} p{0.27\textwidth} p{0.48\textwidth}}
+\toprule
+\textbf{Objeto} & \textbf{Domínio ilustrativo} & \textbf{Interpretação}\\
+\midrule
+$d_{k,t}$ & $\{\mathrm{in},\mathrm{out}\}$ & direção da operação em relação à entidade: aquisição/entrada ou fornecimento/saída;\\
+$q_{k,t}$ & $\{\text{bem},\text{serviço}\}$ & natureza econômica principal do objeto;\\
+$v_{k,t}$ & $\R_+$ & valor monetário bruto associado ao registro;\\
+$s_{k,t}$ & tempo/calendário & data ou instante de ocorrência/reconhecimento;\\
+$a_{k,t}$ & identificadores & agentes/contrapartes relevantes;\\
+$p_{k,t}$ & conjunto de condições & forma e condição de pagamento/recebimento;\\
+$\ell_{k,t}$ & classes/códigos & atributos contábeis, fiscais ou documentais;\\
+$\ldots$ & -- & quantidade, unidade, local, documento fiscal, centro de custo, natureza fiscal etc.\\
+\bottomrule
+\end{longtable}
+
+\begin{cuidado}
+Em geral, $v_{k,t}$ não é igual à base tributável $B_{j,k,t}$. O valor econômico registrado é um atributo da operação; a base é o resultado de um operador jurídico-tributário aplicado à operação.
+\end{cuidado}
+
+\subsection{Coleção de operações}
+
+Para preservar multiplicidade e ordem documental, é mais rigoroso tratar o conjunto bruto como uma \textbf{família finita indexada} (ou sequência de registros), e não como um conjunto no sentido estrito:
+\begin{equation}
+\boxed{u_t^{\mathrm{tr}}=(\cT_{k,t})_{k=1}^{n_t}.}
+\label{eq:u-indexed}
+\end{equation}
+A notação por chaves será usada apenas como abreviação visual quando a ordem não for relevante.
+
+A coleção granular do período é
+\begin{equation}
+\boxed{u_t=\{\cT_{1,t},\ldots,\cT_{n_t,t}\}.}
+\end{equation}
+Quando o foco é comercial, podemos decompor
+\begin{equation}
+\boxed{u_t^{\mathrm{tr}}=u_t^{\mathrm{in}}\sqcup u_t^{\mathrm{out}},}
+\end{equation}
+com
+\[
+u_t^{\mathrm{in}}=\{\cT_{k,t}:d_{k,t}=\mathrm{in}\},
+\qquad
+u_t^{\mathrm{out}}=\{\cT_{k,t}:d_{k,t}=\mathrm{out}\}.
+\]
+
+A notação $\sqcup$ destaca que estamos particionando a coleção segundo a direção.
+
+\begin{intuicao}
+Em uma empresa organizada, o objeto $u_t$ raramente existe fisicamente como um único vetor pronto. Ele é reconstruído a partir de registros granulares distribuídos entre documentos fiscais, módulos de compras e vendas, razão/diário, contas a receber e a pagar, bancos, folha, estoques e outros subsistemas. Para modelagem computacional, a tarefa é construir uma camada de integração que normalize esses registros para um esquema comum como a Equação~\eqref{eq:transacao-array}.
+\end{intuicao}
+
+\subsection{Transações não bastam: eventos internos e ajustes}
+
+Depreciação, provisões, apropriações por competência e outros ajustes podem afetar demonstrações sem corresponder a uma compra ou venda externa no mesmo período. Portanto, um modelo mais completo escreve
+\begin{equation}
+\boxed{u_t=u_t^{\mathrm{tr}}\sqcup u_t^{\mathrm{adj}},}
+\label{eq:u-extendido}
+\end{equation}
+em que $u_t^{\mathrm{adj}}$ contém eventos e ajustes contábeis internos.
+
+\begin{intuicao}
+Uma empresa organizada não possui necessariamente um único ``vetor $u_t$'' físico. Os dados podem estar distribuídos entre ERP, razão contábil, documentos fiscais, contas a pagar/receber, folha, tesouraria e sistemas auxiliares. $u_t$ é a abstração que reúne essa camada granular antes da agregação.
+\end{intuicao}
+
+% ============================================================
+\section[Dos eventos às demonstrações: decompondo G]{Dos eventos às demonstrações: decompondo $\mathcal G$}
+% ============================================================
+
+A afirmação ``somamos os $v_{k,t}$ para preencher as demonstrações'' é insuficiente. Antes da soma, há reconhecimento, mensuração e classificação.
+
+\subsection{Uma fatoração operacional}
+
+Para cada demonstração $S\in\{\BP,\DRE,\DFC,\DVA\}$, escrevemos o operador contábil como composição:
+\begin{equation}
+\boxed{
+\cG^{S}
+=
+\cA^{S}\circ\cK^{S}\circ\cM^{\mathrm{acct}}\circ\cR^{\mathrm{acct}}.
+}
+\label{eq:G-factor}
+\end{equation}
+Os componentes são:
+
+\begin{enumerate}
+    \item $\cR^{\mathrm{acct}}$: \textbf{reconhecimento} -- decide se e quando um evento deve entrar no sistema contábil;
+    \item $\cM^{\mathrm{acct}}$: \textbf{mensuração} -- atribui o valor contábil pertinente;
+    \item $\cK^{S}$: \textbf{classificação} -- determina em qual categoria da demonstração $S$ o efeito deve aparecer;
+    \item $\cA^{S}$: \textbf{agregação} -- soma/combina os efeitos classificados.
+\end{enumerate}
+
+Entre os eventos e as demonstrações pode ser útil explicitar uma camada de lançamentos/razão, denotada por $\Lambda_t$:
+\begin{equation}
+\boxed{
+u_t
+\xrightarrow{\cR^{\mathrm{acct}},\cM^{\mathrm{acct}}}
+\Lambda_t
+\xrightarrow{\cK^S,\cA^S}
+S_t.}
+\label{eq:ledger}
+\end{equation}
+
+\subsection{Agregação ponderada}
+
+Uma categoria contábil $c$ de uma demonstração $S$ pode ser escrita, em primeira aproximação linear, como
+\begin{equation}
+\boxed{Y^{S}_{c,t}=\sum_{k=1}^{n_t} w^{S}_{c,k,t}\,m_{k,t}+a^{S}_{c,t},}
+\label{eq:agregacao-pesos}
+\end{equation}
+em que:
+\begin{itemize}
+    \item $m_{k,t}$ é o valor depois da mensuração contábil;
+    \item $w^{S}_{c,k,t}$ codifica direção, inclusão, sinal, rateio ou classificação;
+    \item $a^{S}_{c,t}$ agrega ajustes não representados pela soma simples.
+\end{itemize}
+
+O peso não precisa ser apenas $0$ ou $1$; pode haver sinais, rateios e transformações mais complexas. A expressão linear é uma primeira parametrização, não uma restrição universal.
+
+\subsection{Por que DRE e DFC divergem}
+
+Considere uma venda a prazo de $R\$\,1.000$ no fim do período. Suponha que os critérios de reconhecimento da receita estejam satisfeitos, mas que o caixa ainda não tenha sido recebido.
+
+Então, esquematicamente,
+\[
+w^{\DRE}_{\mathrm{receita},k,t}=1,
+\qquad
+w^{\DFC}_{\mathrm{entrada\ de\ caixa},k,t}=0.
+\]
+Logo,
+\[
+\Delta \DRE_t\neq 0,
+\qquad
+\Delta \DFC_t=0
+\]
+para essa operação no período. O efeito patrimonial aparece em contas a receber, e o fluxo de caixa surgirá quando houver liquidação financeira.
+
+\begin{formalizacao}
+A mesma operação elementar admite projeções diferentes:
+\[
+\cT_{k,t}\xrightarrow{\theta_t^{\mathrm{acct}}}
+\bigl(\Delta \BP_{k,t},\Delta \DRE_{k,t},\Delta \DFC_{k,t},\Delta \DVA_{k,t}\bigr).
+\]
+Portanto, demonstrações são \textbf{visões funcionais diferentes da mesma base de eventos}.
+\end{formalizacao}
+
+% ============================================================
+\section{Quarta camada: tributos como operadores sobre operações e resultados}
+% ============================================================
+
+\subsection{Regra mínima de cálculo}
+
+Para um tributo $j$, a forma mais simples é
+\begin{equation}
+\boxed{T_{j,t}=\tau_{j,t}B_{j,t},}
+\label{eq:tax-basic}
+\end{equation}
+em que:
+\begin{itemize}
+    \item $B_{j,t}$ = base de cálculo;
+    \item $\tau_{j,t}$ = alíquota aplicável;
+    \item $T_{j,t}$ = montante tributário apurado/devido, antes de distinguir pagamento e outros ajustes.
+\end{itemize}
+
+\begin{cuidado}
+``Apurado/devido'' não é sinônimo de ``pago''. O pagamento é um evento financeiro posterior ou concomitante e, por isso, deve ser separado quando se conecta a tributação à DFC.
+\end{cuidado}
+
+\subsection{Taxonomia econômica mínima}
+
+No escopo deste caderno, é útil separar:
+\begin{align}
+\mathsf J_{\mathrm{resultado}}&=\{\IRPJ,\CSLL\},\\
+\mathsf J_{\mathrm{consumo,legado}}&=\{\PIS,\COFINS,\ICMS,\ISS,\IPI\},\\
+\mathsf J_{\mathrm{RTC}}&=\{\CBS,\IBS,\IS\}.
+\end{align}
+
+A distinção é econômica e funcional. IRPJ e CSLL se relacionam à renda/resultado tributável; a Reforma Tributária do Consumo reorganiza principalmente a tributação sobre operações com bens e serviços.
+
+Juridicamente, nem todos os itens listados são ``impostos'': PIS, Cofins, CSLL e CBS são contribuições. Por isso, \textbf{tributo} é o termo genérico preferível.
+
+\subsection[Regra tributária theta j,t]{Regra tributária $\theta_{j,t}$}
+
+Definimos
+\begin{equation}
+\boxed{
+\theta_{j,t}=
+\bigl(
+\theta^{\mathrm{inc}}_{j,t},
+\theta^{\mathrm{base}}_{j,t},
+\theta^{\mathrm{aliq}}_{j,t},
+\theta^{\mathrm{cred}}_{j,t},
+\theta^{\mathrm{apur}}_{j,t},
+\theta^{\mathrm{pag}}_{j,t},
+\theta^{\mathrm{exc}}_{j,t},\ldots
+\bigr).
+}
+\label{eq:theta-tax}
+\end{equation}
+Essa tupla codifica as características normativas relevantes do tributo $j$ no tempo $t$.
+
+% ============================================================
+\section[O operador de base de cálculo B j]{O operador de base de cálculo $\mathcal B_j$}
+% ============================================================
+
+\subsection{Da realidade econômica à base tributável}
+
+Para uma operação $\cT_{k,t}$,
+\begin{equation}
+\boxed{B_{j,k,t}=\cB_j(\cT_{k,t};\theta_{j,t}).}
+\label{eq:B-op}
+\end{equation}
+O operador $\cB_j$ responde: \emph{qual parcela mensurada desta operação integra a base do tributo $j$?}
+
+Em um tributo incidente sobre resultado, o argumento pode ser um agregado contábil-fiscal, e não uma transação isolada:
+\begin{equation}
+\boxed{B_{j,t}=\cB_j(\DRE_t,z_t;\theta_{j,t}),}
+\label{eq:B-result}
+\end{equation}
+em que $z_t$ representa ajustes e informações fiscais adicionais.
+
+\subsection{Incidência, mensuração e exclusões}
+
+Uma decomposição didática de $\cB_j$ é
+\begin{equation}
+\boxed{
+B_{j,k,t}
+=
+\iota_j(\cT_{k,t};\theta_{j,t})
+\Bigl[
+M_j(\cT_{k,t};\theta_{j,t})
+-
+E_j(\cT_{k,t};\theta_{j,t})
+\Bigr],
+}
+\label{eq:B-decomp}
+\end{equation}
+em que:
+\begin{itemize}
+    \item $\iota_j\in\{0,1\}$ é o indicador de incidência;
+    \item $M_j$ é o operador de mensuração do valor fiscal relevante;
+    \item $E_j$ agrega exclusões/deduções admitidas para a construção da base.
+\end{itemize}
+
+O pipeline é
+\[
+\cT_{k,t}
+\xrightarrow{\text{incidência}}
+\{0,1\}
+\xrightarrow{\text{mensuração}}
+M_{j,k,t}
+\xrightarrow{\text{exclusões}}
+B_{j,k,t}.
+\]
+
+\begin{cuidado}
+Essa fatoração não pretende reproduzir a estrutura textual de cada lei. É uma decomposição funcional: diferentes tributos podem implementar a lógica de modo muito mais complexo, com bases presumidas, regimes específicos, valores de mercado, reduções, diferimentos ou outras regras.
+\end{cuidado}
+
+\subsection{Operador de alíquota}
+
+A alíquota também pode depender da operação e das regras:
+\begin{equation}
+\boxed{\tau_{j,k,t}=\cA_j(\cT_{k,t};\theta_{j,t}).}
+\label{eq:aliq-op}
+\end{equation}
+Assim, não é necessário supor uma única $\tau_j$ constante para todas as operações.
+
+% ============================================================
+\section{Débito, crédito e não cumulatividade}
+% ============================================================
+
+\subsection{Débito na saída}
+
+Para uma operação de saída elegível,
+\begin{equation}
+\boxed{D_{j,k,t}=\cD_j(\cT^{\mathrm{out}}_{k,t};\theta_{j,t})
+=\tau_{j,k,t}^{\mathrm{out}}B_{j,k,t}^{\mathrm{out}}}
+\label{eq:debit}
+\end{equation}
+no caso simples ad valorem.
+
+Agregando:
+\begin{equation}
+\boxed{D_{j,t}=\sum_{k\in\mathcal O_t}D_{j,k,t},}
+\end{equation}
+em que $\mathcal O_t$ indexa as operações de saída relevantes.
+
+\subsection{Crédito na entrada}
+
+Para uma operação de entrada,
+\begin{equation}
+\boxed{C_{j,k,t}=\cC_j(\cT^{\mathrm{in}}_{k,t};\theta_{j,t}).}
+\label{eq:credit}
+\end{equation}
+No caso mais simples e sob hipóteses de creditamento integral,
+\[
+C_{j,k,t}=\tau_{j,k,t}^{\mathrm{in}}B_{j,k,t}^{\mathrm{in}}.
+\]
+Mas a identidade não é universal: o direito, o momento e a extensão do crédito são determinados por $\theta_{j,t}$.
+
+Agregando:
+\begin{equation}
+\boxed{C_{j,t}=\sum_{k\in\mathcal I_t}C_{j,k,t}.}
+\end{equation}
+
+\subsection{Apuração líquida}
+
+Em um regime não cumulativo simplificado,
+\begin{equation}
+\boxed{S_{j,t}^{\mathrm{apur}}=D_{j,t}-C_{j,t}+A_{j,t}^{\mathrm{tax}},}
+\label{eq:saldo-tax}
+\end{equation}
+em que $A_{j,t}^{\mathrm{tax}}$ reúne estornos, ajustes, créditos presumidos ou outros componentes necessários ao regime.
+
+Para separar obrigação de recolher de saldo credor,
+\begin{align}
+T_{j,t}^{\mathrm{recolher}}&=\max\{S_{j,t}^{\mathrm{apur}},0\},\\
+C_{j,t}^{\mathrm{saldo}}&=\max\{-S_{j,t}^{\mathrm{apur}},0\}.
+\end{align}
+
+\begin{intuicao}
+O efeito ``tributar o valor adicionado'' é consequência econômica do mecanismo débito--crédito em condições adequadas; não significa que a empresa necessariamente calcule uma variável ``valor adicionado'' e aplique uma alíquota diretamente sobre ela.
+\end{intuicao}
+
+\subsection{Caso especial: mesma alíquota e bases iguais aos valores das operações}
+
+Se
+\[
+\tau^{\mathrm{in}}=\tau^{\mathrm{out}}=\tau,
+\qquad
+B^{\mathrm{in}}=v^{\mathrm{in}},
+\qquad
+B^{\mathrm{out}}=v^{\mathrm{out}},
+\]
+então
+\begin{align}
+S_{j,t}^{\mathrm{apur}}
+&=\tau v^{\mathrm{out}}-\tau v^{\mathrm{in}}\\
+&=\tau\bigl(v^{\mathrm{out}}-v^{\mathrm{in}}\bigr).
+\end{align}
+É nessa situação simplificada que o valor agregado aparece de forma imediata.
+
+% ============================================================
+\section{Tributos sobre resultado: operador periódico}
+% ============================================================
+
+Tributos sobre resultado diferem dos tributos transacionais porque a base tipicamente é construída a partir de agregados do período e de regras fiscais adicionais.
+
+Em forma abstrata,
+\begin{equation}
+\boxed{
+u_t
+\xrightarrow{\cG^{\DRE}}
+L_t
+\xrightarrow{\cB_j(\cdot;\theta_{j,t})}
+B_{j,t}
+\xrightarrow{\cA_j}
+T_{j,t}.}
+\label{eq:result-pipeline}
+\end{equation}
+
+No regime de lucro real, por exemplo, uma representação didática pode ser
+\begin{equation}
+\boxed{B_{j,t}=L_t+Ad_t-Ex_t-Comp_t,}
+\label{eq:lucro-real-didatico}
+\end{equation}
+em que $Ad_t$, $Ex_t$ e $Comp_t$ representam, genericamente, adições, exclusões e compensações admitidas pelo regime do tributo considerado.
+
+\begin{cuidado}
+A equação acima é um \textbf{esqueleto didático}. IRPJ e CSLL possuem regras próprias, limites, adicionais, períodos de apuração e tratamentos específicos. O operador $\cB_j$ é a forma correta de preservar essa complexidade sem fingir que o resultado contábil é automaticamente a base fiscal.
+\end{cuidado}
+
+% ============================================================
+\section[Hierarquia normativa e o significado de theta j]{Hierarquia normativa e o significado de $\theta_j$}
+% ============================================================
+
+\subsection{EC, LC e regulamentação}
+
+\textbf{EC} significa Emenda Constitucional; \textbf{LC} significa Lei Complementar.
+
+Em vez de escrever uma soma direta, que sugeriria estrutura vetorial, representaremos a regra tributária como uma tupla hierárquica:
+\begin{equation}
+\boxed{
+\theta_{j,t}=
+\bigl(
+\theta^{\mathrm{const}}_{j,t},
+\theta^{\mathrm{LC}}_{j,t},
+\theta^{\mathrm{reg}}_{j,t},
+\theta^{\mathrm{tec}}_{j,t}
+\bigr).
+}
+\label{eq:theta-hier}
+\end{equation}
+
+\begin{center}
+\begin{tikzpicture}[
+  node distance=8mm,
+  n/.style={draw,rounded corners=2mm,text width=105mm,align=center,minimum height=10mm,inner sep=4pt},
+  arr/.style={-{Latex[length=2.5mm]},thick,draw=Navy}
+]
+\node[n,fill=LightBlue,draw=Blue] (cf) {Constituição Federal + EC 132/2023\\princípios, competências, arquitetura constitucional};
+\node[n,fill=LightTeal,draw=Teal,below=of cf] (lc) {LC 214/2025, alterada pela LC 227/2026\\instituição e disciplina legal de IBS, CBS e IS; gestão e processo do IBS};
+\node[n,fill=LightGold,draw=Gold,below=of lc] (reg) {Regulamentação\\Decreto 12.955/2026 (CBS) e Resolução CGIBS 6/2026 (IBS)};
+\node[n,fill=LightGray,draw=MidGray,below=of reg] (tec) {Atos conjuntos, notas técnicas, leiautes e documentos fiscais eletrônicos\\operacionalização e informação granular};
+\draw[arr] (cf) -- (lc);
+\draw[arr] (lc) -- (reg);
+\draw[arr] (reg) -- (tec);
+\end{tikzpicture}
+\end{center}
+
+\begin{fonte}
+Em agosto de 2026, a Receita Federal lista como marcos centrais da Reforma Tributária do Consumo a EC 132/2023, a LC 214/2025, a LC 227/2026 e o Decreto 12.955/2026. O CGIBS publicou a Resolução 6/2026 como regulamento do IBS \cite{RFBLeg,CGIBS6}.
+\end{fonte}
+
+% ============================================================
+\section{A reforma como operador sobre o sistema tributário}
+% ============================================================
+
+A Reforma Tributária do Consumo não apenas altera parâmetros dentro de um tributo; ela também altera o conjunto de tributos. Portanto, a representação mais correta é
+\begin{equation}
+\boxed{
+\mathfrak R:
+(\mathsf J^{\mathrm{old}},\Theta^{\mathrm{old}})
+\longmapsto
+(\mathsf J^{\mathrm{new}},\Theta^{\mathrm{new}}).
+}
+\label{eq:reform-op}
+\end{equation}
+
+No núcleo da genealogia:
+\begin{equation}
+\boxed{\PIS+\COFINS\longrightarrow\CBS,}
+\end{equation}
+\begin{equation}
+\boxed{\ICMS+\ISS\longrightarrow\IBS.}
+\end{equation}
+A CBS e o IBS formam o chamado \textbf{IVA dual}. O Imposto Seletivo (IS) é um novo tributo com função própria; não deve ser representado simplesmente como sucessor do IPI. A transição prevê redução a zero das alíquotas do IPI a partir de 2027, com a exceção constitucional/legal vinculada à Zona Franca de Manaus \cite{EC132,LC214,RFBEntenda}.
+
+\begin{formalizacao}
+Para uma análise contrafactual, podemos manter as operações fixas e alterar apenas o regime:
+\[
+\mathcal H^{\mathrm{tax}}(u_t;\Theta^{\mathrm{old}})
+\quad\text{versus}\quad
+\mathcal H^{\mathrm{tax}}(u_t;\Theta^{\mathrm{new}}).
+\]
+Isso isola o efeito normativo. Na economia real, contudo, a reforma pode alterar preços e decisões e, portanto, retroagir sobre o próprio $u_t$.
+\end{formalizacao}
+
+\subsection{Simplicidade não é ``preservação do valor das operações''}
+
+A EC 132/2023 introduziu, no Sistema Tributário Nacional, princípios como simplicidade e transparência. A LC 214/2025 explicita o princípio da neutralidade para IBS e CBS \cite{EC132,LC214}. Isso não implica uma restrição matemática
+\[
+\sum_k v_{k,t}^{\mathrm{old}}=\sum_k v_{k,t}^{\mathrm{new}}
+\]
+como propriedade da reforma. Essa igualdade só ocorre se o analista deliberadamente fixa $u_t$ em um experimento contrafactual.
+
+% ============================================================
+\section{Fluxograma global do sistema}
+% ============================================================
+
+\begin{center}
+\resizebox{0.98\textwidth}{!}{%
+\begin{tikzpicture}[
+  node distance=8mm and 12mm,
+  box/.style={draw,rounded corners=2mm,align=center,minimum height=9mm,inner sep=4pt},
+  bstate/.style={box,fill=LightBlue,draw=Blue,text width=28mm},
+  bevent/.style={box,fill=LightGray,draw=MidGray,text width=35mm},
+  bacct/.style={box,fill=LightTeal,draw=Teal,text width=39mm},
+  btax/.style={box,fill=LightGold,draw=Gold,text width=39mm},
+  resultbox/.style={box,fill=white,draw=Navy,text width=34mm},
+  arr/.style={-{Latex[length=2.3mm]},thick,draw=Navy}
+]
+\node[bstate] (x0) {$x_t$\\estado};
+\node[bevent,right=of x0] (u) {$u_t$\\$\cT_{k,t}$ e ajustes};
+\node[bacct,right=of u] (acct) {$\theta_t^{acct}$\\reconhecer, mensurar, classificar};
+\node[resultbox,right=of acct] (stm) {$\DRE_t,\DFC_t,\DVA_t$\\e $\Delta x_t$};
+\node[bstate,right=of stm] (x1) {$x_{t+1}$\\novo estado};
+
+\node[btax,below=16mm of acct] (taxrules) {$\Theta_t^{tax}$\\regras por tributo $j$};
+\node[btax,left=of taxrules] (taxop) {$\cB_j,\cA_j,\cC_j,\cD_j$\\operadores tributários};
+\node[resultbox,left=of taxop] (taxres) {$B,\tau,C,D$\\$S^{apur},T^{recolher}$};
+
+\draw[arr] (x0) -- (u);
+\draw[arr] (u) -- (acct);
+\draw[arr] (acct) -- (stm);
+\draw[arr] (stm) -- (x1);
+\draw[arr] (u.south) |- (taxop.west);
+\draw[arr] (taxrules) -- (taxop);
+\draw[arr] (taxop) -- (taxres);
+\draw[arr] (taxres.west) -| ($(x1.south)+(0,-2mm)$) -- (x1.south);
+\end{tikzpicture}}
+\end{center}
+
+O fluxograma evidencia duas leituras simultâneas dos mesmos eventos:
+\begin{enumerate}
+    \item a \textbf{leitura contábil}, que produz lançamentos, demonstrações e transição patrimonial;
+    \item a \textbf{leitura tributária}, que produz incidência, base, alíquotas, créditos, débitos e apuração.
+\end{enumerate}
+
+% ============================================================
+\section{Exemplos ilustrativos}
+% ============================================================
+
+Esta seção usa números deliberadamente simples. As alíquotas aqui são \textbf{hipotéticas}, salvo quando a subseção indicar expressamente base legal vigente.
+
+\subsection{Exemplo I -- compra por 100, venda por 150 e IVA hipotético de 10\%}
+
+Considere duas operações no período $I_t$:
+\begin{align*}
+\cT_{1,t}^{\mathrm{in}}&=(\mathrm{in},\mathrm{bem},100,\ldots),\\
+\cT_{2,t}^{\mathrm{out}}&=(\mathrm{out},\mathrm{bem},150,\ldots).
+\end{align*}
+
+Hipóteses didáticas:
+\[
+B^{\mathrm{in}}=100,
+\quad
+B^{\mathrm{out}}=150,
+\quad
+\tau^{\mathrm{in}}=\tau^{\mathrm{out}}=0{,}10,
+\]
+e creditamento integral.
+
+\textbf{Passo 1 -- crédito da entrada}
+\[
+C_t=0{,}10\times 100=10.
+\]
+
+\textbf{Passo 2 -- débito da saída}
+\[
+D_t=0{,}10\times 150=15.
+\]
+
+\textbf{Passo 3 -- apuração líquida}
+\[
+S_t^{\mathrm{apur}}=15-10=5.
+\]
+
+\textbf{Passo 4 -- interpretação econômica}
+\[
+5=0{,}10(150-100)=0{,}10\times 50.
+\]
+Sob essas hipóteses, a carga líquida do elo corresponde a 10\% do valor adicionado de $50$.
+
+\begin{cuidado}
+O cálculo ``10+15=25'' mistura o tributo da operação anterior com o débito da empresa analisada. O crédito existe precisamente para evitar a cumulatividade ao longo da cadeia. Além disso, na legislação efetiva, momento de apropriação e restrições ao crédito devem ser verificados em $\theta_j$.
+\end{cuidado}
+
+\subsection{Exemplo II -- venda a prazo: DRE sem DFC no mesmo instante}
+
+Venda de $R\$\,1.000$ reconhecida no período, com recebimento em $t+1$.
+
+\textbf{DRE:}
+\[
+\Delta R_t=+1000.
+\]
+
+\textbf{DFC no período corrente:}
+\[
+\Delta CASH_t=0.
+\]
+
+\textbf{BP:}
+\[
+\Delta \text{Contas a Receber}_t=+1000
+\]
+antes dos demais efeitos da operação.
+
+O mesmo $v_{k,t}$ é, portanto, classificado de forma distinta por $\cG^{\DRE}$, $\cG^{\DFC}$ e $\cG^{\BP}$.
+
+\subsection{Exemplo III -- depreciação: DRE sem transação externa de caixa}
+
+Suponha despesa de depreciação de $R\$\,200$ no período.
+
+O evento pertence a $u_t^{\mathrm{adj}}$, não precisa de compra/venda no mesmo período, e produz:
+\[
+\Delta \DRE_t=-200,
+\qquad
+\Delta \DFC_t=0
+\]
+como fluxo de caixa direto. No BP, reduz o valor contábil líquido do ativo por meio da depreciação acumulada e afeta o patrimônio líquido via resultado, mantidas as demais condições.
+
+\subsection{Exemplo IV -- base de resultado com ajuste fiscal hipotético}
+
+Suponha:
+\[
+R_t=500,
+\quad K_t=300,
+\quad E_t=100.
+\]
+Logo,
+\[
+L_t=500-300-100=100.
+\]
+Admita, apenas para ilustrar $\cB_j$, uma adição fiscal de $20$ e exclusão de $5$:
+\[
+B_{j,t}=100+20-5=115.
+\]
+Se $\tau_j=15\%$ hipotéticos,
+\[
+T_{j,t}=0{,}15\times115=17{,}25.
+\]
+O ponto não é a alíquota, mas a cadeia:
+\[
+u_t\to \DRE_t\to L_t\to \cB_j\to B_{j,t}\to T_{j,t}.
+\]
+
+\subsection{Exemplo V -- DVA simplificada}
+
+Suponha que a entidade tenha, no período:
+\[
+R_t^{\DVA}=500,
+\qquad
+I_t^{\mathrm{terc}}=300,
+\qquad
+Ret_t=20,
+\qquad
+\VA_t^{\mathrm{transf}}=10.
+\]
+Então:
+\begin{align*}
+\VA_t^{\mathrm{bruto}}&=500-300=200,\\
+\VA_t^{\mathrm{liq}}&=200-20=180,\\
+\VA_t^{\mathrm{dist}}&=180+10=190.
+\end{align*}
+Se a distribuição for
+\[
+W_t=80,
+\quad G_t=40,
+\quad K_t^{(3)}=30,
+\quad K_t^{(p)}=40,
+\]
+então
+\[
+80+40+30+40=190=\VA_t^{\mathrm{dist}}.
+\]
+A igualdade funciona como controle interno do exemplo.
+
+% ============================================================
+\section{Exemplos ancorados na legislação e normas vigentes em 2026}
+% ============================================================
+
+Nesta seção, ``vigente'' significa verificado nas fontes oficiais consultadas em 25 de agosto de 2026.
+
+\subsection{Exemplo legal I -- incidência de IBS/CBS sobre operação onerosa}
+
+A LC 214/2025, em texto compilado com as alterações posteriores, define operações com bens e serviços e estabelece, no art. 4º, a incidência de IBS e CBS sobre operações onerosas com bens ou serviços. Compra e venda é listada expressamente entre as espécies de fornecimento com contraprestação \cite{LC214}.
+
+No nosso formalismo, para
+\[
+\cT_{k,t}=(\mathrm{out},\mathrm{bem},v_{k,t},\ldots),
+\]
+a primeira pergunta é
+\[
+\iota_{\IBS}(\cT_{k,t};\theta_{\IBS,t})=?
+\]
+Se a operação está no regime geral e não cai em hipótese de não incidência ou tratamento específico, a resposta é $1$.
+
+A base geral, segundo o art. 12 da LC 214/2025, é o \textbf{valor da operação}, salvo disposição em contrário \cite{LC214,Dec12955}. Assim, no caso simples,
+\[
+B_{\IBS,k,t}=M_{\IBS}(\cT_{k,t})=v_{k,t}
+\]
+após considerar os componentes e exclusões definidos legalmente.
+
+\subsection{Exemplo legal II -- crédito no regime regular}
+
+O art. 47 da LC 214/2025 disciplina a não cumulatividade e, em síntese, permite ao contribuinte do regime regular apropriar créditos de IBS e CBS quando ocorre a extinção dos débitos relativos às operações em que ele é adquirente, ressalvadas hipóteses legais, como uso ou consumo pessoal \cite{LC214}.
+
+Portanto, o operador de crédito deve incluir uma condição temporal/jurídica:
+\begin{equation}
+C_{j,k,t}
+=
+\cC_j\bigl(\cT_{k,t}^{\mathrm{in}},e_{k,t}^{\mathrm{debito\ extinto}};\theta_{j,t}\bigr).
+\end{equation}
+Isso é mais fiel à legislação do que a regra ingênua
+\[
+C_{j,k,t}=\tau B
+\]
+sem qualquer condição.
+
+A regulamentação do IBS publicada pelo CGIBS em 2026 inclusive distingue, conceitualmente, crédito \emph{a apropriar}, crédito \emph{apropriado} e crédito \emph{utilizado} \cite{CGIBS6}. Essa taxonomia mostra que o crédito é um objeto com estado próprio.
+
+\begin{formalizacao}
+Podemos introduzir um estado do crédito $\gamma_{j,k,t}$:
+\[
+\gamma_{j,k,t}\in
+\{\mathrm{expectativa},\mathrm{apropriado},\mathrm{utilizado}\}.
+\]
+Então $\cC_j$ não produz apenas um número; pode produzir o par
+\[
+\cC_j(\cT_{k,t};\theta_j)=(c_{j,k,t},\gamma_{j,k,t}).
+\]
+Essa extensão é útil para um simulador operacional.
+\end{formalizacao}
+
+\subsection{Exemplo legal III -- alíquotas de teste em 2026}
+
+A transição constitucional e a LC 214/2025 preveem, para 2026, as alíquotas de teste abaixo \cite{EC132,LC214,RFB2026}:
+\[
+\tau_{\CBS}=0{,}9\%,
+\qquad
+\tau_{\IBS}=0{,}1\%.
+\]
+Considere, apenas para calcular os valores nominais destacados, uma operação com base de
+\[
+B=R\$\,10.000.
+\]
+Então:
+\begin{align*}
+D_{\CBS}&=0{,}009\times 10.000=R\$\,90,\\
+D_{\IBS}&=0{,}001\times 10.000=R\$\,10.
+\end{align*}
+Logo, o destaque nominal total é
+\[
+R\$\,90+R\$\,10=R\$\,100.
+\]
+
+\begin{cuidado}
+Esse cálculo não deve ser lido isoladamente como ``R\$ 100 de caixa necessariamente recolhidos''. Em 2026 existem regras de compensação com PIS/Cofins e possibilidade de dispensa da arrecadação das alíquotas de teste para contribuintes que cumpram as obrigações acessórias aplicáveis \cite{RFB2026}. Portanto, o operador de pagamento $\theta^{\mathrm{pag}}$ precisa ser separado do operador de débito nominal.
+\end{cuidado}
+
+\subsection[Exemplo legal IV - reforma como mudança de J e Theta]{Exemplo legal IV -- reforma como mudança de $\mathsf J$ e $\Theta$}
+
+O sistema legado e o sistema-alvo simplificado (desconsiderando, nesta linha, a coexistência transitória e a exceção remanescente do IPI) podem ser esquematizados como
+\[
+\mathsf J^{\mathrm{old}}_{\mathrm{consumo}}
+=\{\PIS,\COFINS,\ICMS,\ISS,\IPI\},
+\]
+\[
+\mathsf J^{\mathrm{new}}_{\mathrm{consumo}}
+=\{\CBS,\IBS,\IS\}
+\]
+com regras de transição até 2033.
+
+A genealogia principal é
+\[
+(\PIS,\COFINS)\mapsto\CBS,
+\qquad
+(\ICMS,\ISS)\mapsto\IBS.
+\]
+O IPI passa por redução de alíquotas no cronograma da reforma, e o IS é criado como imposto seletivo. Assim, $\mathfrak R$ altera simultaneamente a \textbf{taxonomia} e os \textbf{operadores}.
+
+% ============================================================
+\section{Indicadores como funcionais das demonstrações}
+% ============================================================
+
+Indicadores não são novos eventos econômicos; são funções que comprimem informação de estados e fluxos.
+
+Um indicador de estado pode ser
+\[
+I_t^{\mathrm{liq}}=\phi_{\mathrm{liq}}(x_t)
+=\frac{AC_t}{PC_t},
+\]
+em que $AC_t$ e $PC_t$ são ativo e passivo circulantes.
+
+Um indicador de fluxo pode ser
+\[
+I_t^{\mathrm{margem}}
+=\phi_{\mathrm{margem}}(\DRE_t)
+=\frac{L_t}{R_t}.
+\]
+
+Um indicador misto pode combinar fluxo e estado, por exemplo
+\[
+ROA_t=\phi_{ROA}(x_t,\DRE_t)
+=\frac{L_t}{A_t^{\mathrm{ref}}}.
+\]
+A escolha da medida de ativo de referência deve ser especificada (saldo final, médio etc.).
+
+% ============================================================
+\section{Arquitetura para um simulador contábil-tributário}
+% ============================================================
+
+A parametrização anterior sugere uma arquitetura computacional natural.
+
+\subsection{Entrada}
+
+\begin{equation}
+\boxed{
+\mathcal D_t=
+\bigl(x_t,u_t,\theta_t^{\mathrm{acct}},\Theta_t^{\mathrm{tax}}\bigr).
+}
+\end{equation}
+
+\subsection{Camada contábil}
+
+\[
+\mathcal D_t
+\xrightarrow{\cR^{acct},\cM^{acct}}
+\Lambda_t
+\xrightarrow{\cG}
+(\BP_{t+1},\DRE_t,\DFC_t,\DVA_t).
+\]
+
+\subsection{Camada tributária}
+
+Para cada $j\in\mathsf J_t$:
+\[
+\cT_{k,t}
+\xrightarrow{\cB_j,\cA_j,\cC_j,\cD_j}
+(B_{j,k,t},\tau_{j,k,t},C_{j,k,t},D_{j,k,t})
+\]
+e, depois,
+\[
+\{C_{j,k,t},D_{j,k,t}\}_k
+\xrightarrow{\text{apuração}}
+S_{j,t}^{\mathrm{apur}}.
+\]
+
+\subsection{Experimento contrafactual de reforma}
+
+Fixando $(x_t,u_t)$ e comparando regimes:
+\begin{align}
+Y_t^{\mathrm{old}}&=H(x_t,u_t;\Theta_t^{\mathrm{old}}),\\
+Y_t^{\mathrm{new}}&=H(x_t,u_t;\Theta_t^{\mathrm{new}}),\\
+\Delta Y_t^{\mathrm{RTC}}&=Y_t^{\mathrm{new}}-Y_t^{\mathrm{old}}.
+\end{align}
+O vetor $Y_t$ pode conter carga tributária, saldo de créditos, caixa, margem, preço, indicadores ou qualquer resposta de interesse.
+
+\begin{intuicao}
+Essa separação é particularmente útil em colaboração interdisciplinar: o especialista contábil/tributário especifica $\theta$, $\cB$, critérios de crédito e classificação; o matemático/computacional transforma essas regras em operadores auditáveis, cenários e análises de sensibilidade.
+\end{intuicao}
+
+% ============================================================
+\section{Taxonomia consolidada dos objetos}
+% ============================================================
+
+\begin{longtable}{p{0.18\textwidth} p{0.25\textwidth} p{0.48\textwidth}}
+\toprule
+\textbf{Símbolo} & \textbf{Tipo} & \textbf{Definição operacional}\\
+\midrule
+$x_t$ & estado & estado econômico-contábil da entidade no instante $t$;\\
+$\BP_t$ & projeção de estado & posição patrimonial: $\BP_t=\pi_{\BP}(x_t)$;\\
+$u_t$ & coleção de eventos & operações externas e ajustes reconhecíveis ocorridos em $I_t$;\\
+$\cT_{k,t}$ & registro granular & operação $k$, representada por atributos como direção, natureza e valor;\\
+$v_{k,t}$ & escalar monetário & valor econômico associado ao registro; não é automaticamente base fiscal;\\
+$\theta_t^{acct}$ & regras contábeis & reconhecimento, mensuração, classificação e apresentação;\\
+$\theta_{j,t}$ & regras tributárias & regras do tributo $j$ no período;\\
+$\cG^S$ & operador contábil & transforma eventos/lançamentos na demonstração $S$;\\
+$\cB_j$ & operador de base & transforma objeto econômico em base $B_{j,k,t}$ ou $B_{j,t}$;\\
+$\cA_j$ & operador de alíquota & determina $\tau_{j,k,t}$ aplicável;\\
+$\cC_j$ & operador de crédito & determina existência, valor e momento do crédito;\\
+$\cD_j$ & operador de débito & determina débito tributário de operações de saída;\\
+$D_{j,t}$ & agregado de débitos & soma dos débitos do tributo $j$ no período;\\
+$C_{j,t}$ & agregado de créditos & soma dos créditos apropriáveis/apropriados conforme o regime;\\
+$S_{j,t}^{apur}$ & saldo de apuração & diferença entre débitos, créditos e ajustes;\\
+$T_{j,t}^{recolher}$ & obrigação positiva & parcela positiva do saldo de apuração, antes de particularidades de pagamento;\\
+$\DRE_t$ & fluxo econômico & desempenho reconhecido por competência no período;\\
+$\DFC_t$ & fluxo financeiro & movimentos de caixa/equivalentes, classificados por atividade;\\
+$\DVA_t$ & fluxo de riqueza & riqueza criada/recebida e sua distribuição;\\
+$\mathfrak R$ & operador de reforma & transforma o conjunto de tributos e suas regras;\\
+$\phi$ & indicador/funcional & comprime estados e/ou fluxos em uma métrica de interesse.\\
+\bottomrule
+\end{longtable}
+
+% ============================================================
+\section{Mapa de erros conceituais a evitar}
+% ============================================================
+
+\begin{enumerate}
+    \item \textbf{Confundir $T_{j,t}$ com pagamento.} Apuração e pagamento devem ser separados.
+    \item \textbf{Chamar todos os tributos de impostos.} Há impostos e contribuições; ``tributo'' é o termo guarda-chuva.
+    \item \textbf{Escrever $x_t=\BP_t$.} O BP é melhor interpretado como projeção do estado.
+    \item \textbf{Tratar DRE/DFC/DVA como derivadas.} São agregações de fluxo durante um período, cada uma com filtro próprio.
+    \item \textbf{Somar diretamente $v_{k,t}$.} Antes da agregação existem reconhecimento, mensuração e classificação.
+    \item \textbf{Identificar valor da operação e base.} Em geral, $v_{k,t}\neq B_{j,k,t}$; a igualdade depende de $\cB_j$.
+    \item \textbf{Definir crédito sempre como $\tau B$.} O crédito depende do regime, das restrições e de condições temporais/jurídicas.
+    \item \textbf{Confundir valor adicionado e lucro.} A DVA distribui riqueza entre pessoal, governo, capitais de terceiros e próprios; lucro é apenas uma parcela possível da apropriação econômica.
+    \item \textbf{Escrever $\IPI\to\IS$.} O IS é novo e tem função própria; a transição do IPI é distinta.
+    \item \textbf{Supor que a reforma preserva $\sum v_{k,t}$.} Isso só ocorre em uma comparação contrafactual com operações fixadas.
+\end{enumerate}
+
+% ============================================================
+\appendix
+\section{Matriz de integridade em relação aos anexos}
+% ============================================================
+
+A tabela abaixo registra como os principais objetos presentes nos anexos foram preservados, corrigidos ou aprofundados.
+
+\begin{longtable}{p{0.30\textwidth} p{0.18\textwidth} p{0.43\textwidth}}
+\toprule
+\textbf{Objeto nos anexos} & \textbf{Tratamento} & \textbf{Resultado nesta versão}\\
+\midrule
+$T_{j,t}=\tau_jB_{j,t}$ & preservado + refinado & separação entre débito, apuração, recolhimento e pagamento;\\
+$T=\tau B-C$ & refinado & substituído, quando necessário, por $S^{apur}=D-C+A$ para distinguir saldo credor;\\
+IRPJ/CSLL vs. tributos sobre consumo & preservado & taxonomia por base econômica e incidência periódica/transacional;\\
+PIS/Cofins $\to$ CBS; ICMS/ISS $\to$ IBS & preservado & inserido em operador de reforma $\mathfrak R$;\\
+IPI e IS & corrigido & IS não é sucessor direto do IPI; transições separadas;\\
+$\BP_t$ como estoque & preservado + refinado & $\BP_t=\pi_{\BP}(x_t)$;\\
+DRE, DFC, DVA como fluxos & preservado + refinado & operadores distintos em $I_t$, não derivadas de $x_t$;\\
+$x_{t+1}=F(x_t,u_t;\theta_t)$ & preservado + refinado & regras contábeis e tributárias separadas em $\vartheta_t$;\\
+$u_t=(u_t^{in},u_t^{out})$ & preservado + estendido & partição transacional e inclusão de ajustes internos;\\
+$\cT_{k,t}=(d,q,v,\ldots)$ & preservado + aprofundado & registro estruturado com atributos temporais, contrapartes e classes;\\
+$\cB_j$ & preservado + aprofundado & decomposição didática incidência--mensuração--exclusões;\\
+crédito na entrada / débito na saída & preservado + corrigido & operadores $\cC_j$ e $\cD_j$, com condições legais de apropriação;\\
+$\cG^{\mathrm{demo}}$ & preservado + aprofundado & fatoração reconhecimento--mensuração--classificação--agregação;\\
+reforma atua sobre $\theta$ & preservado + refinado & altera também o conjunto de tributos $\mathsf J$;\\
+indicadores $I_t=\phi(\cdot)$ & preservado & tratados como funcionais de estados e fluxos.\\
+\bottomrule
+\end{longtable}
+
+% ============================================================
+\section{Siglas}
+% ============================================================
+
+\begin{longtable}{p{0.20\textwidth} p{0.70\textwidth}}
+\toprule
+\textbf{Sigla} & \textbf{Significado}\\
+\midrule
+BP & Balanço Patrimonial\\
+DRE & Demonstração do Resultado do Exercício\\
+DFC & Demonstração dos Fluxos de Caixa\\
+DVA & Demonstração do Valor Adicionado\\
+IRPJ & Imposto sobre a Renda das Pessoas Jurídicas\\
+CSLL & Contribuição Social sobre o Lucro Líquido\\
+PIS/Pasep & Programa de Integração Social / Programa de Formação do Patrimônio do Servidor Público\\
+Cofins & Contribuição para o Financiamento da Seguridade Social\\
+ICMS & Imposto sobre Operações relativas à Circulação de Mercadorias e sobre Prestações de Serviços de Transporte Interestadual e Intermunicipal e de Comunicação\\
+ISS & Imposto sobre Serviços de Qualquer Natureza\\
+IPI & Imposto sobre Produtos Industrializados\\
+CBS & Contribuição sobre Bens e Serviços\\
+IBS & Imposto sobre Bens e Serviços\\
+IS & Imposto Seletivo\\
+IVA & Imposto sobre Valor Agregado (denominação econômica corrente), em sentido econômico geral\\
+EC & Emenda Constitucional\\
+LC & Lei Complementar\\
+CPC & Comitê de Pronunciamentos Contábeis\\
+CGIBS & Comitê Gestor do Imposto sobre Bens e Serviços\\
+RTC & Reforma Tributária do Consumo\\
+\bottomrule
+\end{longtable}
+
+% ============================================================
+\section{Referências normativas e técnicas}
+% ============================================================
+
+\small
+\begin{thebibliography}{99}
+
+\bibitem{EC132}
+BRASIL. \textbf{Emenda Constitucional nº 132, de 20 de dezembro de 2023}. Altera o Sistema Tributário Nacional. Presidência da República. Disponível em: \url{https://www.planalto.gov.br/ccivil_03/constituicao/emendas/emc/emc132.htm}. Acesso em: 25 ago. 2026.
+
+\bibitem{LC214}
+BRASIL. \textbf{Lei Complementar nº 214, de 16 de janeiro de 2025}, texto compilado. Institui o IBS, a CBS e o IS, cria o Comitê Gestor do IBS e altera a legislação tributária. Disponível em: \url{https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214compilado.htm}. Acesso em: 25 ago. 2026.
+
+\bibitem{LC227}
+BRASIL. \textbf{Lei Complementar nº 227, de 13 de janeiro de 2026}. Institui o Comitê Gestor do IBS, dispõe sobre o processo administrativo tributário do IBS e dá outras providências. Referenciada na página oficial de legislação da RTC. Acesso em: 25 ago. 2026.
+
+\bibitem{Dec12955}
+BRASIL. \textbf{Decreto nº 12.955, de 29 de abril de 2026}. Regulamenta a Contribuição Social sobre Bens e Serviços (CBS). Disponível em: \url{https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2026/decreto/d12955.htm}. Acesso em: 25 ago. 2026.
+
+\bibitem{CGIBS6}
+COMITÊ GESTOR DO IBS. \textbf{Resolução CGIBS nº 6, de 30 de abril de 2026}. Regulamenta o Imposto sobre Bens e Serviços (IBS). Disponível em: \url{https://www.cgibs.gov.br/regulamentos}. Acesso em: 25 ago. 2026.
+
+\bibitem{RFBLeg}
+RECEITA FEDERAL DO BRASIL. \textbf{Legislação da Reforma Tributária do Consumo}. Atualizada em agosto de 2026. Disponível em: \url{https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/acoes-e-programas/programas-e-atividades/reforma-tributaria-do-consumo/legislacao}. Acesso em: 25 ago. 2026.
+
+\bibitem{RFBEntenda}
+RECEITA FEDERAL DO BRASIL. \textbf{Entenda a Reforma Tributária do Consumo}. Disponível em: \url{https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/acoes-e-programas/programas-e-atividades/reforma-tributaria-do-consumo/entenda}. Acesso em: 25 ago. 2026.
+
+\bibitem{RFB2026}
+RECEITA FEDERAL DO BRASIL. \textbf{Orientações da Reforma Tributária para 2026}. Disponível em: \url{https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/acoes-e-programas/programas-e-atividades/reforma-tributaria-do-consumo/orientacoes-2026}. Acesso em: 25 ago. 2026.
+
+\bibitem{CPC00}
+COMITÊ DE PRONUNCIAMENTOS CONTÁBEIS. \textbf{CPC 00 (R2) -- Estrutura Conceitual para Relatório Financeiro}. Disponível em: \url{https://www.cpc.org.br/Arquivos/Documentos/573_CPC00%28R2%29.pdf}. Acesso em: 25 ago. 2026.
+
+\bibitem{CPC26}
+COMITÊ DE PRONUNCIAMENTOS CONTÁBEIS. \textbf{CPC 26 (R1) -- Apresentação das Demonstrações Contábeis}. Disponível em: \url{https://www.cpc.org.br/Arquivos/Documentos/312_CPC_26_R1_rev%2023.pdf}. Acesso em: 25 ago. 2026.
+
+\bibitem{CPC03}
+COMITÊ DE PRONUNCIAMENTOS CONTÁBEIS. \textbf{CPC 03 (R2) -- Demonstração dos Fluxos de Caixa}. Disponível em: \url{https://www.cpc.org.br/Arquivos/Documentos/183_CPC_03_R2_rev%2021.pdf}. Acesso em: 25 ago. 2026.
+
+\bibitem{CPC09}
+COMITÊ DE PRONUNCIAMENTOS CONTÁBEIS. \textbf{CPC 09 (R1) -- Demonstração do Valor Adicionado}. Disponível em: \url{https://www.cpc.org.br/Arquivos/Documentos/632_CPC%2009%20R1.pdf}. Acesso em: 25 ago. 2026.
+
+\end{thebibliography}
+\normalsize
+
+\end{document}
