@@ -296,6 +296,8 @@ def _validate_event_semantics(row: pd.Series) -> tuple[ValidationIssue, ...]:
         cost = row["VL_CUSTO_CENTS"]
         if cost is None:
             issues.append(ValidationIssue("missing_sale_cost", "Venda deve informar VL_CUSTO_CENTS.", event_id=event_id))
+        elif cost <= 0:
+            issues.append(ValidationIssue("non_positive_sale_cost", "VL_CUSTO_CENTS deve ser > 0 para vendas no MVP.", event_id=event_id))
         elif cost > row["VL_EVENTO_CENTS"]:
             issues.append(ValidationIssue("sale_cost_exceeds_amount", "VL_CUSTO_CENTS não pode exceder VL_EVENTO_CENTS no MVP.", event_id=event_id))
 

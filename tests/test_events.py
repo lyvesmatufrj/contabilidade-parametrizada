@@ -96,6 +96,12 @@ def test_sale_cost_is_required():
     assert "missing_sale_cost" in issue_codes(df)
 
 
+def test_sale_cost_must_be_positive():
+    df = build_demo_events(PERIOD)
+    df.loc[df["ID_EVENTO"] == "E005", "VL_CUSTO_CENTS"] = 0
+    assert "non_positive_sale_cost" in issue_codes(df)
+
+
 def test_demo_scenario_is_complete_and_valid():
     df = build_demo_events(PERIOD)
     report = validate_events(df, PERIOD)

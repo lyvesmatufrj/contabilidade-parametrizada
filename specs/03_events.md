@@ -302,10 +302,10 @@ venda_a_prazo
 `VL_CUSTO_CENTS` é obrigatório e deve satisfazer:
 
 ```text
-0 <= VL_CUSTO_CENTS <= VL_EVENTO_CENTS
+0 < VL_CUSTO_CENTS <= VL_EVENTO_CENTS
 ```
 
-A desigualdade é uma restrição simplificadora do cenário MVP, não uma lei contábil universal.
+A desigualdade estrita no limite inferior é uma restrição simplificadora do cenário MVP para preservar a exigência da spec 04 de que toda partida tenha valor positivo; não é uma lei contábil universal.
 
 ### E5 — classe
 
