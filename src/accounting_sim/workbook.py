@@ -1367,6 +1367,9 @@ def _write_table(wb: Workbook, sheet_name: str, frame: pd.DataFrame) -> None:
     _format_columns(ws, columns)
     _set_column_widths(ws, columns)
 
+    if materialized.empty:
+        return
+
     table_ref = f"A1:{get_column_letter(len(columns))}{max(ws.max_row, 1)}"
     table = Table(displayName=TABLE_NAMES[sheet_name], ref=table_ref)
     table.tableStyleInfo = TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False, showLastColumn=False, showRowStripes=True, showColumnStripes=False)
@@ -1726,11 +1729,13 @@ def _add_list_validation(ws, column: str, formula: str, first_row: int, last_row
 
 
 def _read_table_frame(ws, expected_columns: tuple[str, ...]) -> pd.DataFrame:
-    if not ws.tables:
-        raise SchemaValidationError(f"Aba {ws.title} não contém tabela nomeada.")
-    table = next(iter(ws.tables.values()))
-    min_col, min_row, max_col, max_row = range_boundaries(table.ref)
-    rows = list(ws.iter_rows(min_row=min_row, max_row=max_row, min_col=min_col, max_col=max_col, values_only=True))
+    if ws.tables:
+        table = next(iter(ws.tables.values()))
+        min_col, min_row, max_col, max_row = range_boundaries(table.ref)
+        rows = list(ws.iter_rows(min_row=min_row, max_row=max_row, min_col=min_col, max_col=max_col, values_only=True))
+    else:
+        max_col = len(expected_columns)
+        rows = list(ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=max_col, values_only=True))
     if not rows:
         raise SchemaValidationError(f"Tabela vazia em {ws.title}.")
     headers = tuple(str(value).strip() for value in rows[0])

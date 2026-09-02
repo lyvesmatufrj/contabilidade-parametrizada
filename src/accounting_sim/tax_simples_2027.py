@@ -96,6 +96,8 @@ _SUPPORTED_ACTIVITY = "comercio_revenda_mercadorias"
 _SUPPORTED_ANNEX = "I"
 _SUPPORTED_SCOPE = "domestica"
 _SUPPORTED_SUPPLIER_REGIME = "ibs_cbs_regime_regular"
+_SUPPORTED_B2B_ACQUIRER_REGIME = "ibs_cbs_regime_regular"
+_SUPPORTED_B2C_ACQUIRER_REGIME = "consumidor_final"
 _SUPPORTED_PURCHASE_DESTINATION = "revenda"
 _SUPPORTED_PURCHASE_TYPES = frozenset({EventType.PURCHASE_CASH.value, EventType.PURCHASE_CREDIT.value})
 _SUPPORTED_SALE_TYPES = frozenset({EventType.SALE_CASH.value, EventType.SALE_CREDIT.value})
@@ -189,10 +191,6 @@ def validate_tax_analysis_parameters(
             issues.append(ValidationIssue("invalid_tax_analysis_parameter_type", "TIPO_VALOR inválido em ANALISE_PARAM."))
 
     values = _analysis_value_map(params)
-    for key in _REQUIRED_ANALYSIS_KEYS:
-        if key not in values:
-            issues.append(ValidationIssue("missing_tax_analysis_parameter_key", f"Chave analítica obrigatória ausente: {key}."))
-
     cbs_rate = _safe_decimal(values.get("CBS_2027_ANALYSIS_RATE_FRACTION"))
     if cbs_rate is not None and not (Decimal(0) < cbs_rate < Decimal(1)):
         issues.append(ValidationIssue("invalid_tax_analysis_cbs_rate", "CBS_2027_ANALYSIS_RATE_FRACTION deve pertencer a (0,1)."))
@@ -234,11 +232,15 @@ def validate_simples_2027_admissibility(
         alternatives = active.loc[active["ID_CENARIO"] != baseline["ID_CENARIO"]]
         alternative = alternatives.iloc[0]
         issues.extend(_validate_scenario_pair(baseline, alternative))
+        rules_by_scenario: dict[str, EffectiveSimples2027Rules] = {}
         for scenario_id in (str(baseline["ID_CENARIO"]), str(alternative["ID_CENARIO"])):
             try:
-                select_effective_simples_2027_rules(tax_context, scenario_id)
+                rules_by_scenario[scenario_id] = select_effective_simples_2027_rules(tax_context, scenario_id)
             except SchemaValidationError as exc:
                 issues.append(ValidationIssue("simples_2027_normative_parameters_invalid", str(exc), scenario_id=scenario_id))
+        reference_rules = rules_by_scenario.get(str(baseline["ID_CENARIO"]))
+        require_cbs_analysis_rate = reference_rules is None or reference_rules.cbs_regular_rate_fraction is None
+        issues.extend(_validate_required_analysis_parameters(analysis_parameters, require_cbs_analysis_rate=require_cbs_analysis_rate))
 
     entity_id = str(active.iloc[0]["ID_ENTIDADE"]).strip() if not active.empty and "ID_ENTIDADE" in active.columns else ""
     entity = _entity_attribute_map(tax_context.entity_profile, entity_id)
@@ -324,17 +326,30 @@ def select_effective_simples_2027_rules(
 def select_simples_2027_analysis_assumptions(
     analysis_parameters: pd.DataFrame,
 ) -> Simples2027AnalysisAssumptions:
+    return _select_simples_2027_analysis_assumptions(analysis_parameters, require_cbs_analysis_rate=True)
+
+
+def _select_simples_2027_analysis_assumptions(
+    analysis_parameters: pd.DataFrame,
+    *,
+    require_cbs_analysis_rate: bool,
+) -> Simples2027AnalysisAssumptions:
     report = validate_tax_analysis_parameters(analysis_parameters)
     if not report.ok:
         _raise_report("ANALISE_PARAM inválido para Simples 2027", report)
     params = _normalize_analysis_parameters(analysis_parameters)
     values = _analysis_value_map(params)
-    missing = [key for key in _REQUIRED_ANALYSIS_KEYS if key not in values]
+    required_keys = _required_analysis_keys(require_cbs_analysis_rate=require_cbs_analysis_rate)
+    missing = [key for key in required_keys if key not in values]
     if missing:
         raise SchemaValidationError(f"ANALISE_PARAM sem chaves obrigatórias para Spec 12: {missing}.")
     return Simples2027AnalysisAssumptions(
         analysis_id=str(params["ID_ANALISE"].iloc[0]).strip(),
-        cbs_analysis_rate_fraction=_require_decimal(_parse_generic_value(values["CBS_2027_ANALYSIS_RATE_FRACTION"], ScalarValueType.DECIMAL.value), "CBS_2027_ANALYSIS_RATE_FRACTION"),
+        cbs_analysis_rate_fraction=(
+            _require_decimal(_parse_generic_value(values["CBS_2027_ANALYSIS_RATE_FRACTION"], ScalarValueType.DECIMAL.value), "CBS_2027_ANALYSIS_RATE_FRACTION")
+            if "CBS_2027_ANALYSIS_RATE_FRACTION" in values
+            else Decimal(0)
+        ),
         regular_credit_realization_fraction=_require_decimal(_parse_generic_value(values["REGULAR_CREDIT_REALIZATION_FRACTION"], ScalarValueType.DECIMAL.value), "REGULAR_CREDIT_REALIZATION_FRACTION"),
     )
 
@@ -354,7 +369,10 @@ def run_simples_2027_counterfactual_report(
     baseline_id = _clean_string(baseline["ID_CENARIO"])
     alternative_id = _clean_string(alternative["ID_CENARIO"])
     rules = select_effective_simples_2027_rules(tax_context, baseline_id)
-    analysis = select_simples_2027_analysis_assumptions(analysis_parameters)
+    analysis = _select_simples_2027_analysis_assumptions(
+        analysis_parameters,
+        require_cbs_analysis_rate=rules.cbs_regular_rate_fraction is None,
+    )
     cbs_rate, cbs_rate_source = _resolve_cbs_2027_rate(rules, analysis)
     entity = _entity_attribute_map(tax_context.entity_profile, _clean_string(baseline["ID_ENTIDADE"]))
     rbt12_cents = _require_int(entity["RBT12_CENTS"], "RBT12_CENTS")
@@ -439,7 +457,7 @@ def run_simples_2027_counterfactual_report(
             "ENCARGO_TRIBUTARIO_COMPARAVEL_CENTS": hybrid_charge,
             "CLIENTE_B2B_CREDITO_CBS_POTENCIAL_CENTS": b2b_cbs_hybrid,
             "CLIENTE_B2B_CREDITO_IBS_POTENCIAL_CENTS": b2b_ibs_hybrid,
-            "STATUS_RESULTADO": _STATUS_ANALYTICAL if cbs_rate_source == "analysis" else _STATUS_NORMATIVE,
+            "STATUS_RESULTADO": _STATUS_ANALYTICAL,
             "VERSAO_REGRA": rules.rule_version,
         },
     ]
@@ -463,6 +481,28 @@ def _resolve_cbs_2027_rate(
     if rules.cbs_regular_rate_fraction is not None:
         return rules.cbs_regular_rate_fraction, "normative"
     return analysis.cbs_analysis_rate_fraction, "analysis"
+
+
+def _required_analysis_keys(*, require_cbs_analysis_rate: bool) -> tuple[str, ...]:
+    if require_cbs_analysis_rate:
+        return _REQUIRED_ANALYSIS_KEYS
+    return ("REGULAR_CREDIT_REALIZATION_FRACTION",)
+
+
+def _validate_required_analysis_parameters(
+    analysis_parameters: pd.DataFrame,
+    *,
+    require_cbs_analysis_rate: bool,
+) -> list[ValidationIssue]:
+    if tuple(analysis_parameters.columns) != TAX_ANALYSIS_PARAMETER_COLUMNS:
+        return []
+    params = _normalize_analysis_parameters(analysis_parameters)
+    values = _analysis_value_map(params)
+    issues: list[ValidationIssue] = []
+    for key in _required_analysis_keys(require_cbs_analysis_rate=require_cbs_analysis_rate):
+        if key not in values:
+            issues.append(ValidationIssue("missing_simples_2027_analysis_parameter_key", f"Chave analítica necessária ao recorte Simples 2027 ausente: {key}."))
+    return issues
 
 
 def _validate_scenario_pair(baseline: pd.Series, alternative: pd.Series) -> list[ValidationIssue]:
@@ -537,10 +577,21 @@ def _validate_facts(events: pd.DataFrame, fiscal_event_attributes: pd.DataFrame)
                 has_purchase = True
         if event_type in _SUPPORTED_SALE_TYPES:
             customer_type = _clean_string(attrs.get("TIPO_CLIENTE"))
+            acquirer_regime = _clean_string(attrs.get("REGIME_ADQUIRENTE"))
+            if not acquirer_regime:
+                issues.append(ValidationIssue("simples_2027_missing_acquirer_regime", "Venda suportada requer REGIME_ADQUIRENTE.", event_id=event_id))
             if customer_type == "b2b":
-                has_b2b = True
+                if acquirer_regime != _SUPPORTED_B2B_ACQUIRER_REGIME:
+                    issues.append(ValidationIssue("simples_2027_b2b_acquirer_regime_out_of_scope", "Venda B2B requer adquirente no regime regular de IBS/CBS.", event_id=event_id))
+                elif _clean_string(event["NATUREZA"]) == EventNature.GOOD.value and _clean_string(attrs.get("AMBITO_OPERACAO")) == _SUPPORTED_SCOPE:
+                    has_b2b = True
             elif customer_type == "b2c":
-                has_b2c = True
+                if acquirer_regime != _SUPPORTED_B2C_ACQUIRER_REGIME:
+                    issues.append(ValidationIssue("simples_2027_b2c_acquirer_regime_out_of_scope", "Venda B2C requer REGIME_ADQUIRENTE=consumidor_final.", event_id=event_id))
+                elif _clean_string(event["NATUREZA"]) == EventNature.GOOD.value and _clean_string(attrs.get("AMBITO_OPERACAO")) == _SUPPORTED_SCOPE:
+                    has_b2c = True
+            else:
+                issues.append(ValidationIssue("simples_2027_sale_customer_type_out_of_scope", "Venda suportada requer TIPO_CLIENTE=b2b ou b2c.", event_id=event_id))
     if not has_purchase:
         issues.append(ValidationIssue("simples_2027_missing_eligible_purchase", "Fixture demonstrativo requer ao menos uma compra elegível."))
     if not has_b2b:
@@ -566,9 +617,11 @@ def _measure_facts(events: pd.DataFrame, fiscal_event_attributes: pd.DataFrame) 
                 purchases += value
         elif event_type in _SUPPORTED_SALE_TYPES:
             revenue += value
-            if _clean_string(attrs.get("TIPO_CLIENTE")) == "b2b":
+            customer_type = _clean_string(attrs.get("TIPO_CLIENTE"))
+            acquirer_regime = _clean_string(attrs.get("REGIME_ADQUIRENTE"))
+            if customer_type == "b2b" and acquirer_regime == _SUPPORTED_B2B_ACQUIRER_REGIME:
                 b2b += value
-            elif _clean_string(attrs.get("TIPO_CLIENTE")) == "b2c":
+            elif customer_type == "b2c" and acquirer_regime == _SUPPORTED_B2C_ACQUIRER_REGIME:
                 b2c += value
     return _MeasuredFacts(revenue, purchases, b2b, b2c)
 

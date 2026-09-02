@@ -93,14 +93,10 @@ def validate_canonical_workbook(path: str | Path) -> WorkbookArtifactSummary:
     wb = load_workbook(workbook_path, data_only=True)
     if tuple(wb.sheetnames) != WORKBOOK_SHEETS:
         raise AccountingInvariantError("Workbook canonico fora da ordem de abas.")
-    for sheet_name, table_name in TABLE_NAMES.items():
+    for sheet_name in TABLE_NAMES:
         ws = wb[sheet_name]
-        if table_name not in ws.tables:
-            raise AccountingInvariantError(f"Tabela nomeada ausente em {sheet_name}.")
         if ws.freeze_panes != "A2":
             raise AccountingInvariantError(f"Freeze panes invalido em {sheet_name}.")
-        if ws.tables[table_name].autoFilter is None:
-            raise AccountingInvariantError(f"Filtro ausente em {sheet_name}.")
 
     if not EDITABLE_SHEETS.issubset(set(WORKBOOK_SHEETS)):
         raise AccountingInvariantError("Abas editaveis fora do contrato canonico.")
@@ -109,6 +105,16 @@ def validate_canonical_workbook(path: str | Path) -> WorkbookArtifactSummary:
 
     frames = {sheet_name: _read_table_frame(wb, sheet_name) for sheet_name in TABLE_NAMES}
     row_counts = {sheet_name: len(frame) for sheet_name, frame in frames.items()}
+    for sheet_name, table_name in TABLE_NAMES.items():
+        ws = wb[sheet_name]
+        if row_counts[sheet_name] == 0:
+            if table_name in ws.tables:
+                raise AccountingInvariantError(f"Aba vazia {sheet_name} nao deve conter Table de uma linha.")
+        else:
+            if table_name not in ws.tables:
+                raise AccountingInvariantError(f"Tabela nomeada ausente em {sheet_name}.")
+            if ws.tables[table_name].autoFilter is None:
+                raise AccountingInvariantError(f"Filtro ausente em {sheet_name}.")
 
     validations = frames["VALIDACOES"]
     failed = validations.loc[validations["OK"] != True]  # noqa: E712
@@ -234,9 +240,12 @@ def _load_tax_parameters() -> pd.DataFrame:
 
 def _read_table_frame(wb, sheet_name: str) -> pd.DataFrame:
     ws = wb[sheet_name]
-    table = ws.tables[TABLE_NAMES[sheet_name]]
-    min_col, min_row, max_col, max_row = range_boundaries(table.ref)
-    rows = list(ws.iter_rows(min_row=min_row, max_row=max_row, min_col=min_col, max_col=max_col, values_only=True))
+    if TABLE_NAMES[sheet_name] in ws.tables:
+        table = ws.tables[TABLE_NAMES[sheet_name]]
+        min_col, min_row, max_col, max_row = range_boundaries(table.ref)
+        rows = list(ws.iter_rows(min_row=min_row, max_row=max_row, min_col=min_col, max_col=max_col, values_only=True))
+    else:
+        rows = list(ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column, values_only=True))
     return pd.DataFrame(rows[1:], columns=rows[0], dtype=object)
 
 

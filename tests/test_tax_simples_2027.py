@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
@@ -118,6 +119,22 @@ def test_fiscal_param_still_requires_provenance() -> None:
     assert any(issue.code == "missing_tax_parameter_provenance" for issue in report.issues)
 
 
+def test_fixture_normative_provenance_patch_is_preserved() -> None:
+    _, tax_context, _ = load_case()
+    params = tax_context.tax_parameters
+    cgsn_190 = params.loc[params["FONTE_TITULO"] == "Resolução CGSN 190/2026"]
+    assert set(cgsn_190["FONTE_URL"]) == {
+        "https://www.in.gov.br/web/dou/-/resolucao-cgsn-n-190-de-4-de-agosto-de-2026-724454118"
+    }
+    anexo_i = cgsn_190.loc[cgsn_190["DISPOSITIVO"].astype(str).str.contains("Anexo I", regex=False)]
+    assert set(anexo_i["VIG_FIM"]) == {date(2028, 12, 31)}
+
+    ibs = params.loc[params["CHAVE_PARAM"] == "IBS_2027_REGULAR_RATE_FRACTION"].iloc[0]
+    assert ibs["DISPOSITIVO"] == "art. 344"
+    revenue = params.loc[params["CHAVE_PARAM"] == "SIMPLES_2027_REVENUE_RECOGNITION"].iloc[0]
+    assert revenue["VIG_FIM"] == date(2027, 6, 30)
+
+
 def test_analysis_rate_key_is_not_normative_parameter() -> None:
     _, tax_context, _ = load_case()
     invalid = tax_context.tax_parameters.copy()
@@ -147,6 +164,128 @@ def test_normative_cbs_rate_takes_precedence_when_present() -> None:
     hibrido = report.scenario_results.loc[report.scenario_results["ID_CENARIO"] == "SIMPLES_2027_HIBRIDO"].iloc[0]
     assert report.cbs_rate_source == "normative"
     assert hibrido["CBS_REGULAR_RATE_FRACTION"] == Decimal("0.08")
+    assert hibrido["STATUS_RESULTADO"] == "analitico"
+
+
+def test_admissibility_requires_acquirer_regime_for_supported_sales() -> None:
+    events, tax_context, analysis = load_case()
+
+    b2b_wrong = tax_context.fiscal_event_attributes.copy()
+    b2b_wrong.loc[
+        (b2b_wrong["ID_EVENTO"] == "S2027_E003") & (b2b_wrong["ATRIBUTO_FISCAL"] == "REGIME_ADQUIRENTE"),
+        "VALOR",
+    ] = "simples_nacional"
+    report = validate_simples_2027_admissibility(
+        events,
+        TaxContext(tax_context.entity_profile, b2b_wrong, tax_context.tax_scenarios, tax_context.tax_parameters),
+        analysis,
+    )
+    assert any(issue.code == "simples_2027_b2b_acquirer_regime_out_of_scope" for issue in report.issues)
+
+    b2c_wrong = tax_context.fiscal_event_attributes.copy()
+    b2c_wrong.loc[
+        (b2c_wrong["ID_EVENTO"] == "S2027_E004") & (b2c_wrong["ATRIBUTO_FISCAL"] == "REGIME_ADQUIRENTE"),
+        "VALOR",
+    ] = "ibs_cbs_regime_regular"
+    report = validate_simples_2027_admissibility(
+        events,
+        TaxContext(tax_context.entity_profile, b2c_wrong, tax_context.tax_scenarios, tax_context.tax_parameters),
+        analysis,
+    )
+    assert any(issue.code == "simples_2027_b2c_acquirer_regime_out_of_scope" for issue in report.issues)
+
+    missing = tax_context.fiscal_event_attributes.loc[
+        ~(
+            (tax_context.fiscal_event_attributes["ID_EVENTO"] == "S2027_E003")
+            & (tax_context.fiscal_event_attributes["ATRIBUTO_FISCAL"] == "REGIME_ADQUIRENTE")
+        )
+    ].copy()
+    report = validate_simples_2027_admissibility(
+        events,
+        TaxContext(tax_context.entity_profile, missing, tax_context.tax_scenarios, tax_context.tax_parameters),
+        analysis,
+    )
+    assert any(issue.code == "simples_2027_missing_acquirer_regime" for issue in report.issues)
+
+
+def test_b2b_chain_credit_requires_regular_acquirer_regime() -> None:
+    events, tax_context, analysis = load_case()
+    attrs = tax_context.fiscal_event_attributes.copy()
+    attrs.loc[
+        (attrs["ID_EVENTO"] == "S2027_E003") & (attrs["ATRIBUTO_FISCAL"] == "TIPO_CLIENTE"),
+        "VALOR",
+    ] = "b2c"
+    attrs.loc[
+        (attrs["ID_EVENTO"] == "S2027_E003") & (attrs["ATRIBUTO_FISCAL"] == "REGIME_ADQUIRENTE"),
+        "VALOR",
+    ] = "consumidor_final"
+    attrs.loc[
+        (attrs["ID_EVENTO"] == "S2027_E004") & (attrs["ATRIBUTO_FISCAL"] == "TIPO_CLIENTE"),
+        "VALOR",
+    ] = "b2b"
+    attrs.loc[
+        (attrs["ID_EVENTO"] == "S2027_E004") & (attrs["ATRIBUTO_FISCAL"] == "REGIME_ADQUIRENTE"),
+        "VALOR",
+    ] = "ibs_cbs_regime_regular"
+    context = TaxContext(tax_context.entity_profile, attrs, tax_context.tax_scenarios, tax_context.tax_parameters)
+
+    report = run_simples_2027_counterfactual_report(events, context, analysis)
+
+    puro = report.scenario_results.loc[report.scenario_results["ID_CENARIO"] == "SIMPLES_2027_PURO"].iloc[0]
+    hibrido = report.scenario_results.loc[report.scenario_results["ID_CENARIO"] == "SIMPLES_2027_HIBRIDO"].iloc[0]
+    assert puro["CLIENTE_B2B_CREDITO_CBS_POTENCIAL_CENTS"] == 40586
+    assert puro["CLIENTE_B2B_CREDITO_IBS_POTENCIAL_CENTS"] == 450
+    assert hibrido["CLIENTE_B2B_CREDITO_CBS_POTENCIAL_CENTS"] == 270000
+    assert hibrido["CLIENTE_B2B_CREDITO_IBS_POTENCIAL_CENTS"] == 3000
+
+
+def test_supported_events_must_be_goods() -> None:
+    events, tax_context, analysis = load_case()
+    invalid = events.copy()
+    invalid.loc[invalid["ID_EVENTO"] == "S2027_E002", "NATUREZA"] = "financeiro"
+
+    report = validate_simples_2027_admissibility(invalid, tax_context, analysis)
+
+    assert any(issue.code == "simples_2027_event_nature_out_of_scope" for issue in report.issues)
+
+
+def test_admissibility_requires_analysis_hypotheses_only_when_needed() -> None:
+    events, tax_context, analysis = load_case()
+    empty = analysis.iloc[0:0].copy()
+    report = validate_simples_2027_admissibility(events, tax_context, empty)
+    assert any(issue.code == "missing_simples_2027_analysis_parameter_key" for issue in report.issues)
+
+    no_alpha = analysis.loc[analysis["CHAVE_PARAM"] != "REGULAR_CREDIT_REALIZATION_FRACTION"].copy()
+    report = validate_simples_2027_admissibility(events, tax_context, no_alpha)
+    assert any(
+        issue.code == "missing_simples_2027_analysis_parameter_key"
+        and "REGULAR_CREDIT_REALIZATION_FRACTION" in issue.message
+        for issue in report.issues
+    )
+
+    no_cbs = analysis.loc[analysis["CHAVE_PARAM"] != "CBS_2027_ANALYSIS_RATE_FRACTION"].copy()
+    report = validate_simples_2027_admissibility(events, tax_context, no_cbs)
+    assert any(
+        issue.code == "missing_simples_2027_analysis_parameter_key"
+        and "CBS_2027_ANALYSIS_RATE_FRACTION" in issue.message
+        for issue in report.issues
+    )
+
+    params = tax_context.tax_parameters.copy()
+    row = params.iloc[0].copy()
+    row["ID_PARAM"] = "PARAM_CBS_2027_REGULAR_RATE"
+    row["TRIBUTO"] = "CBS"
+    row["CHAVE_PARAM"] = "CBS_2027_REGULAR_RATE_FRACTION"
+    row["VALOR"] = "0.08"
+    row["TIPO_VALOR"] = "decimal"
+    context_with_normative_cbs = TaxContext(
+        tax_context.entity_profile,
+        tax_context.fiscal_event_attributes,
+        tax_context.tax_scenarios,
+        pd.concat([params, pd.DataFrame([row])], ignore_index=True),
+    )
+    report = validate_simples_2027_admissibility(events, context_with_normative_cbs, no_cbs)
+    assert report.ok
 
 
 def test_admissibility_rejects_invalid_scope_and_scenario_shape() -> None:

@@ -370,9 +370,13 @@ def build_case(tmp_path, inputs: WorkbookInputs | None = None):
 def sheet_frame(path, sheet_name: str) -> pd.DataFrame:
     wb = load_workbook(path, data_only=True)
     ws = wb[sheet_name]
-    table = ws.tables[TABLE_NAMES[sheet_name]]
-    min_col, min_row, max_col, max_row = range_boundaries(table.ref)
-    rows = list(ws.iter_rows(min_row=min_row, max_row=max_row, min_col=min_col, max_col=max_col, values_only=True))
+    if ws.tables:
+        table = ws.tables[TABLE_NAMES[sheet_name]]
+        min_col, min_row, max_col, max_row = range_boundaries(table.ref)
+        rows = list(ws.iter_rows(min_row=min_row, max_row=max_row, min_col=min_col, max_col=max_col, values_only=True))
+    else:
+        expected_columns = tuple(ws.cell(row=1, column=column).value for column in range(1, ws.max_column + 1))
+        rows = list(ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=len(expected_columns), values_only=True))
     return pd.DataFrame(rows[1:], columns=rows[0], dtype=object)
 
 
@@ -694,9 +698,12 @@ def test_named_tables_exist_and_cover_expected_row_counts(tmp_path):
         "PROVENIENCIA": 18,
     }
     for sheet_name, table_name in TABLE_NAMES.items():
-        assert table_name in wb[sheet_name].tables
         frame = sheet_frame(path, sheet_name)
         assert len(frame) == expected_rows[sheet_name]
+        if expected_rows[sheet_name] == 0:
+            assert table_name not in wb[sheet_name].tables
+        else:
+            assert table_name in wb[sheet_name].tables
 
 
 def test_tabular_sheets_have_freeze_panes_and_filters(tmp_path):
@@ -704,6 +711,9 @@ def test_tabular_sheets_have_freeze_panes_and_filters(tmp_path):
     for sheet_name, table_name in TABLE_NAMES.items():
         ws = wb[sheet_name]
         assert ws.freeze_panes == "A2"
+        if table_name not in ws.tables:
+            assert ws.max_row == 1
+            continue
         assert ws.tables[table_name].autoFilter is not None
 
 
