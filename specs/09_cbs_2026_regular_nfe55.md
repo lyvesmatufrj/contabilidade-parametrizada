@@ -267,7 +267,8 @@ Se qualquer dado de entrada exigir um desses ramos, o cenário deve ser rejeitad
 |---|---|---|---|---|---|
 | Regime regular | Decreto 12.955/2026, art. 41, §1º | contribuinte não optante pelo Simples/MEI | `chi_t` | cenário: `REGIME_ENTIDADE`, `REGIME_CONSUMO` | cenário Simples/MEI deve ser rejeitado |
 | Incidência | Decreto 12.955/2026, art. 4º | compra/venda onerosa | `INCIDE_k=True` | `TIPO_EVENTO` suportado | compra/venda ordinária admitida |
-| Fato gerador | Decreto 12.955/2026, art. 11, §1º, I | bem material entregue/disponibilizado | data fiscal | `DT_FORNECIMENTO` | data fiscal controla o período |
+| Fato gerador | Decreto 12.955/2026, art. 11, §1º, I | bem material entregue/disponibilizado | data fiscal | `EVENTOS.NATUREZA="bem"`, `DT_FORNECIMENTO` | data fiscal controla o período |
+| Âmbito da operação | recorte operacional da Spec 09 | compra/venda doméstica ordinária | `chi_t` | `EVENTOS_FISCAIS.AMBITO_OPERACAO="domestica"` | importação/exportação devem ser rejeitadas |
 | Base | Decreto 12.955/2026, art. 13 | operação ordinária do recorte | `B_CBS,k,t=VBC_CENTS` documental | `VBC_CENTS` | não exigir igualdade com `VL_EVENTO_CENTS` |
 | Alíquota | LC 214/2025, art. 346; Decreto 12.955/2026, art. 582 | fato gerador em 2026 | `tau=Decimal("0.009")` carregado de parâmetro | `FISCAL_PARAM` + `PCBS_PERCENT` documental | `PCBS_PERCENT=0.9` |
 | NF-e 55 | Ato Conjunto RFB/CGIBS 1/2025, art. 2º, §1º, I | operação documentada | validação documental | `MODELO_DFE` | deve ser `55` |
@@ -481,6 +482,7 @@ Não registrar `INCIDE=False` para aporte, pagamento, recebimento, depreciação
 Para todo evento fiscal suportado:
 
 ```text
+EVENTOS.NATUREZA = "bem"
 2026-08-03 <= DT_FORNECIMENTO <= 2026-08-31
 ```
 
@@ -502,6 +504,7 @@ CHAVE_NFE
 PROTOCOLO_AUTORIZACAO
 STATUS_DFE
 DT_FORNECIMENTO
+AMBITO_OPERACAO
 QTD_ITENS_DFE
 CST_IBS_CBS
 CCLASSTRIB
@@ -558,6 +561,14 @@ Essa é uma simplificação operacional do recorte para representar que existe a
 ### `DT_FORNECIMENTO`
 
 Tipo lógico `date`, armazenado pelo contrato longo da Spec 08.
+
+### `AMBITO_OPERACAO`
+
+```text
+domestica
+```
+
+Importação e exportação estão fora do recorte da Spec 09 e devem ser rejeitadas, não aproximadas pela regra doméstica.
 
 ### `QTD_ITENS_DFE`
 
@@ -722,17 +733,23 @@ DISPOSITIVO = art. 48
 
 ```text
 TIPO_FONTE = oper
+FONTE = Ato Conjunto RFB/CGIBS nº 2/2026 + rol oficial de Atos Conjuntos do CGIBS
+FONTE_URL = https://www.cgibs.gov.br/upload/arquivos/202606/03111600-ato-conjunto-rfb-e-cibs-2827-05-29-assinado.pdf
+DISPOSITIVO = arts. 1º-2º; conclusão false por inferência operacional limitada ao snapshot de 31/08/2026 e auditoria do rol oficial em https://www.cgibs.gov.br/atos-conjuntos
 VALOR = false
 VIG_FIM = 2026-08-31
 DATA_CONSULTA = 2026-09-02
 ```
 
-A proveniência deve apontar para comunicação oficial que caracteriza os campos de split em 2026 como preparatórios e informa que eventual obrigatoriedade produtiva dependerá de instrumentos conjuntos posteriores. A auditoria deve estar limitada ao snapshot de 31/08/2026.
+A proveniência deve apontar para fonte oficial específica. A conclusão `false` não é texto literal dos arts. 1º-2º: é inferência operacional limitada ao snapshot de 31/08/2026, suportada pelo Ato Conjunto RFB/CGIBS nº 2/2026 e pela auditoria do rol oficial de atos até essa data.
 
 ### `CBS_BUYER_COLLECTION_IMPLEMENTED`
 
 ```text
 TIPO_FONTE = oper
+FONTE = Receita Federal — RTC Projeto Piloto — Manual versão I, 13/01/2026
+FONTE_URL = https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/acoes-e-programas/programas-e-atividades/reforma-tributaria-do-consumo/orientacoes-2026
+DISPOSITIVO = seção Autorizações de Acesso/Apuração Assistida; RAD/transferências por recolhimento pelo adquirente apresentado como funcionalidade futura de consulta/simulação no piloto, com conclusão false limitada ao snapshot de 31/08/2026
 VALOR = false
 VIG_FIM = 2026-08-31
 DATA_CONSULTA = 2026-09-02
@@ -1263,49 +1280,51 @@ tests/test_tax_cbs_2026.py
 23. chave duplicada é rejeitada;
 24. protocolo vazio é rejeitado;
 25. status diferente de `autorizado_nao_cancelado` é rejeitado;
-26. `QTD_ITENS_DFE != 1` é rejeitado;
-27. CST diferente da regra efetiva é rejeitado;
-28. cClassTrib diferente da regra efetiva é rejeitado;
-29. `VBC_CENTS <= 0` é rejeitado;
-30. `PCBS_PERCENT` diferente de 0,9% é rejeitado;
-31. `VCBS_CENTS < 0` é rejeitado;
-32. compra sem `DESTINACAO_AQUISICAO=revenda` é rejeitada.
+26. `EVENTOS.NATUREZA != "bem"` é rejeitada para compra/venda suportada;
+27. `AMBITO_OPERACAO != "domestica"` é rejeitado, incluindo importação/exportação;
+28. `QTD_ITENS_DFE != 1` é rejeitado;
+29. CST diferente da regra efetiva é rejeitado;
+30. cClassTrib diferente da regra efetiva é rejeitado;
+31. `VBC_CENTS <= 0` é rejeitado;
+32. `PCBS_PERCENT` diferente de 0,9% é rejeitado;
+33. `VCBS_CENTS < 0` é rejeitado;
+34. compra sem `DESTINACAO_AQUISICAO=revenda` é rejeitada.
 
 ## Grupo D — cálculo documental
 
-33. `vCBS` exatamente calculado é aceito;
-34. diferença de +1 centavo é aceita;
-35. diferença de -1 centavo é aceita quando não produz valor negativo;
-36. diferença maior que 1 centavo é rejeitada;
-37. o motor não depende de igualdade `VL_EVENTO_CENTS == VBC_CENTS`;
-38. nenhuma política arbitrária de arredondamento é necessária para aceitar documento dentro da tolerância.
+35. `vCBS` exatamente calculado é aceito;
+36. diferença de +1 centavo é aceita;
+37. diferença de -1 centavo é aceita quando não produz valor negativo;
+38. diferença maior que 1 centavo é rejeitada;
+39. o motor não depende de igualdade `VL_EVENTO_CENTS == VBC_CENTS`;
+40. nenhuma política arbitrária de arredondamento é necessária para aceitar documento dentro da tolerância.
 
 ## Grupo E — operação
 
-39. venda gera débito e crédito zero;
-40. compra gera crédito e débito zero;
-41. `BASE_CENTS` vem de `VBC_CENTS`;
-42. `ALIQUOTA` vem de `FISCAL_PARAM`;
-43. `VERSAO_REGRA` vem da regra efetiva;
-44. eventos contábeis não fiscais não geram linhas de resultado;
-45. ordem física dos DataFrames de entrada não altera o resultado ordenado.
+41. venda gera débito e crédito zero;
+42. compra gera crédito e débito zero;
+43. `BASE_CENTS` vem de `VBC_CENTS`;
+44. `ALIQUOTA` vem de `FISCAL_PARAM`;
+45. `VERSAO_REGRA` vem da regra efetiva;
+46. eventos contábeis não fiscais não geram linhas de resultado;
+47. ordem física dos DataFrames de entrada não altera o resultado ordenado.
 
 ## Grupo F — apuração
 
-46. caso positivo: `D=1800`, `C=900` -> `S_APUR=900`;
-47. caso positivo e compliance -> `T_RECOLHER=0`;
-48. caso negativo produz `C_SALDO=max(-S,0)`;
-49. `P_CASH_CENTS is None`;
-50. `E_DRE_CENTS is None`;
-51. uma única linha de apuração é produzida para o cenário;
-52. execução repetida com mesmas entradas produz DataFrames equivalentes.
+48. caso positivo: `D=1800`, `C=900` -> `S_APUR=900`;
+49. caso positivo e compliance -> `T_RECOLHER=0`;
+50. caso negativo produz `C_SALDO=max(-S,0)`;
+51. `P_CASH_CENTS is None`;
+52. `E_DRE_CENTS is None`;
+53. uma única linha de apuração é produzida para o cenário;
+54. execução repetida com mesmas entradas produz DataFrames equivalentes.
 
 ## Grupo G — regressão arquitetural
 
-53. não alterar `EVENT_COLUMNS`;
-54. não inserir lógica CBS em `events.py`, `posting.py`, `ledger.py`, `statements.py`, `account_mapping.py` ou `chart_of_accounts.py`;
-55. `validate_tax_context()` da Spec 08 continua passando para contextos anteriores válidos;
-56. schemas reservados `TAX_OPERATION_RESULT_COLUMNS` e `TAX_ASSESSMENT_RESULT_COLUMNS` permanecem exatamente iguais.
+55. não alterar `EVENT_COLUMNS`;
+56. não inserir lógica CBS em `events.py`, `posting.py`, `ledger.py`, `statements.py`, `account_mapping.py` ou `chart_of_accounts.py`;
+57. `validate_tax_context()` da Spec 08 continua passando para contextos anteriores válidos;
+58. schemas reservados `TAX_OPERATION_RESULT_COLUMNS` e `TAX_ASSESSMENT_RESULT_COLUMNS` permanecem exatamente iguais.
 
 ---
 

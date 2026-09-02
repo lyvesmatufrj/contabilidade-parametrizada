@@ -160,6 +160,7 @@ def _parameter(
     device: str,
     vig_ini: str = "2026-01-01",
     vig_fim: str = "",
+    norm_version: str | None = None,
 ) -> dict[str, object]:
     return {
         "ID_PARAM": f"PARAM_{key}",
@@ -173,7 +174,7 @@ def _parameter(
         "FONTE_TITULO": title,
         "FONTE_URL": url,
         "DISPOSITIVO": device,
-        "VERSAO_NORMA": "snapshot_2026_08_31",
+        "VERSAO_NORMA": title if norm_version is None else norm_version,
         "VIG_INI": vig_ini,
         "VIG_FIM": vig_fim,
         "DATA_CONSULTA": "2026-09-02",
@@ -227,7 +228,7 @@ def _tax_parameters() -> pd.DataFrame:
             "str",
             "tec",
             "Tabela CST IBS/CBS 2026-06-23",
-            "https://www.gov.br/",
+            "https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/acoes-e-programas/programas-e-atividades/reforma-tributaria-do-consumo/orientacoes-2026",
             "linha CST 000",
         ),
         _parameter(
@@ -236,7 +237,7 @@ def _tax_parameters() -> pd.DataFrame:
             "str",
             "tec",
             "Tabela cClassTrib IBS/CBS 2026-06-23",
-            "https://www.gov.br/",
+            "https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/acoes-e-programas/programas-e-atividades/reforma-tributaria-do-consumo/orientacoes-2026",
             "linha cClassTrib 000001",
         ),
         _parameter(
@@ -245,7 +246,7 @@ def _tax_parameters() -> pd.DataFrame:
             "decimal",
             "tec",
             "NF-e Nota Tecnica 2025.002 v1.51",
-            "https://www.nfe.fazenda.gov.br/",
+            "https://www.nfe.fazenda.gov.br/portal/listaConteudo.aspx?tipoConteudo=0xlG1bdBass=",
             "regra UB67-10",
         ),
         _parameter(
@@ -262,9 +263,9 @@ def _tax_parameters() -> pd.DataFrame:
             "false",
             "bool",
             "oper",
-            "NF-e Nota Tecnica 2026.006 v1.00",
-            "https://www.nfe.fazenda.gov.br/",
-            "implantacao futura de grupo split",
+            "Ato Conjunto RFB/CGIBS 02/2026 e rol oficial de Atos Conjuntos",
+            "https://www.cgibs.gov.br/upload/arquivos/202606/03111600-ato-conjunto-rfb-e-cibs-2827-05-29-assinado.pdf",
+            "arts. 1-2; conclusao false por inferencia operacional limitada ao snapshot 2026-08-31 e auditoria do rol oficial em https://www.cgibs.gov.br/atos-conjuntos",
             "2026-01-01",
             "2026-08-31",
         ),
@@ -273,9 +274,9 @@ def _tax_parameters() -> pd.DataFrame:
             "false",
             "bool",
             "oper",
-            "Documentacao tecnica RTC 2026",
-            "https://www.gov.br/",
-            "sem recolhimento pelo adquirente no recorte",
+            "Receita Federal - RTC Projeto Piloto - Manual versao I 13/01/2026",
+            "https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/acoes-e-programas/programas-e-atividades/reforma-tributaria-do-consumo/orientacoes-2026",
+            "Manual RTC, secao Autorizações de Acesso/Apuracao Assistida; RAD apresentado como funcionalidade futura de consulta/simulacao no piloto; conclusao false limitada ao snapshot 2026-08-31",
             "2026-01-01",
             "2026-08-31",
         ),
@@ -317,6 +318,7 @@ def _fiscal_event_attributes() -> pd.DataFrame:
         add(event_id, "PROTOCOLO_AUTORIZACAO", f"13526000000000{event_id[-1]}", "str")
         add(event_id, "STATUS_DFE", "autorizado_nao_cancelado", "str")
         add(event_id, "DT_FORNECIMENTO", supply_date, "date")
+        add(event_id, "AMBITO_OPERACAO", "domestica", "str")
         add(event_id, "QTD_ITENS_DFE", "1", "int")
         add(event_id, "CST_IBS_CBS", "000", "str")
         add(event_id, "CCLASSTRIB", "000001", "str")
@@ -435,6 +437,14 @@ def _drop_fiscal_attr(context: TaxContext, event_id: str, attribute: str) -> Tax
     )
 
 
+def _replace_event_column(
+    events: pd.DataFrame, event_id: str, column: str, value: object
+) -> pd.DataFrame:
+    frame = events.copy(deep=True)
+    frame.loc[frame["ID_EVENTO"] == event_id, column] = value
+    return frame
+
+
 def _assert_invalid(context: TaxContext, expected_code: str) -> None:
     report = validate_cbs_2026_admissibility(_events(), context, SCENARIO_ID)
     assert not report.ok
@@ -458,6 +468,12 @@ def test_select_effective_rules_from_versioned_fiscal_param() -> None:
 
 
 def test_exact_vcbs_document_is_accepted() -> None:
+    report = validate_cbs_2026_admissibility(_events(), _tax_context(), SCENARIO_ID)
+
+    assert report.ok
+
+
+def test_domestic_canonical_scenario_is_accepted() -> None:
     report = validate_cbs_2026_admissibility(_events(), _tax_context(), SCENARIO_ID)
 
     assert report.ok
@@ -548,6 +564,15 @@ def test_expired_parameter_fails() -> None:
         select_effective_cbs_2026_rules(context, SCENARIO_ID)
 
 
+def test_divergent_rule_version_between_effective_parameters_fails() -> None:
+    context = _replace_parameter(
+        _tax_context(), "CBS_RATE_FRACTION", "VERSAO_REGRA", "cbs_regra_divergente"
+    )
+
+    with pytest.raises(SchemaValidationError, match="VERSAO_REGRA"):
+        select_effective_cbs_2026_rules(context, SCENARIO_ID)
+
+
 def test_invalid_parameter_provenance_fails() -> None:
     context = _replace_parameter(_tax_context(), "CBS_RATE_FRACTION", "FONTE_TITULO", "")
 
@@ -590,6 +615,7 @@ def test_collection_waiver_rule_false_is_out_of_scope() -> None:
         ("PCBS_PERCENT", "1.0", "cbs_pcbs_invalid"),
         ("QTD_ITENS_DFE", "2", "cbs_item_count_out_of_scope"),
         ("DT_FORNECIMENTO", "2026-08-02", "cbs_supply_date_out_of_scope"),
+        ("DT_FORNECIMENTO", "2026-09-01", "cbs_supply_date_out_of_scope"),
         ("VBC_CENTS", "0", "cbs_base_invalid"),
         ("VCBS_CENTS", "-1", "cbs_vcbs_invalid"),
     ],
@@ -625,6 +651,28 @@ def test_invalid_nfe_key_fails() -> None:
         _replace_fiscal_attr(_tax_context(), "E001", "CHAVE_NFE", "123"),
         "cbs_nfe_key_invalid",
     )
+
+
+@pytest.mark.parametrize(
+    ("event_id", "event_type"),
+    [("E001", "compra"), ("E002", "venda")],
+)
+def test_purchase_or_sale_with_nature_not_good_is_rejected(
+    event_id: str, event_type: str
+) -> None:
+    events = _replace_event_column(_events(), event_id, "NATUREZA", EventNature.SERVICE.value)
+
+    report = validate_cbs_2026_admissibility(events, _tax_context(), SCENARIO_ID)
+
+    assert not report.ok, event_type
+    assert "cbs_event_nature_not_good" in {issue.code for issue in report.issues}
+
+
+@pytest.mark.parametrize("scope", ["importacao", "exportacao"])
+def test_import_or_export_scope_is_not_approximated_by_domestic_rule(scope: str) -> None:
+    context = _replace_fiscal_attr(_tax_context(), "E001", "AMBITO_OPERACAO", scope)
+
+    _assert_invalid(context, "cbs_operation_scope_not_domestic")
 
 
 @pytest.mark.parametrize("delta", [-1, 1])

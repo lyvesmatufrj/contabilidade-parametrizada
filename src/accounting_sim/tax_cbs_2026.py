@@ -13,6 +13,7 @@ from accounting_sim.canonical import (
     TAX_ASSESSMENT_RESULT_COLUMNS,
     TAX_OPERATION_RESULT_COLUMNS,
     EventType,
+    EventNature,
     ScalarValueType,
     SchemaValidationError,
     ValidationIssue,
@@ -50,8 +51,8 @@ _SUPPORTED_ENTITY_TYPE = "pj"
 _SUPPORTED_ACTIVITY = "comercio_revenda_mercadorias"
 _SUPPORTED_DOCUMENT_STATUS = "autorizado_nao_cancelado"
 _SUPPORTED_PURCHASE_DESTINATION = "revenda"
+_SUPPORTED_OPERATION_SCOPE = "domestica"
 _SUPPORTED_ITEM_COUNT = 1
-_SUPPORTED_ASSESSMENT_PERIOD = "monthly"
 
 _REQUIRED_ENTITY_ATTRIBUTES = (
     "TIPO_PESSOA",
@@ -66,6 +67,7 @@ _COMMON_FISCAL_ATTRIBUTES = (
     "PROTOCOLO_AUTORIZACAO",
     "STATUS_DFE",
     "DT_FORNECIMENTO",
+    "AMBITO_OPERACAO",
     "QTD_ITENS_DFE",
     "CST_IBS_CBS",
     "CCLASSTRIB",
@@ -212,8 +214,6 @@ def select_effective_cbs_2026_rules(
             "CBS_2026_COLLECTION_WAIVER_IF_ACCESSORY_COMPLIANT",
         ),
     )
-    if rules.assessment_period != _SUPPORTED_ASSESSMENT_PERIOD:
-        raise SchemaValidationError("CBS_ASSESSMENT_PERIOD fora do recorte mensal da Spec 09.")
     if not rules.credit_extinction_waived:
         raise SchemaValidationError("Modalidades do art. 48 exigem rastreamento fora do recorte da Spec 09.")
     if not rules.collection_waiver_if_accessory_compliant:
@@ -350,6 +350,8 @@ def _validate_supported_fiscal_event(
     event_id = str(event["ID_EVENTO"])
     event_type = str(event["TIPO_EVENTO"])
     issues: list[ValidationIssue] = []
+    if _clean_string(event["NATUREZA"]) != EventNature.GOOD.value:
+        issues.append(ValidationIssue("cbs_event_nature_not_good", "EVENTOS.NATUREZA deve ser bem no recorte CBS 2026.", event_id=event_id, scenario_id=scenario_id))
     required = list(_COMMON_FISCAL_ATTRIBUTES)
     if event_type in _SUPPORTED_PURCHASE_TYPES:
         required.extend(_PURCHASE_ONLY_FISCAL_ATTRIBUTES)
@@ -368,6 +370,8 @@ def _validate_supported_fiscal_event(
         issues.append(ValidationIssue("cbs_protocol_missing", "PROTOCOLO_AUTORIZACAO não pode ser vazio.", event_id=event_id, scenario_id=scenario_id))
     if _clean_string(attrs["STATUS_DFE"]) != _SUPPORTED_DOCUMENT_STATUS:
         issues.append(ValidationIssue("cbs_document_not_authorized", "STATUS_DFE deve representar documento autorizado e não cancelado.", event_id=event_id, scenario_id=scenario_id))
+    if _clean_string(attrs["AMBITO_OPERACAO"]) != _SUPPORTED_OPERATION_SCOPE:
+        issues.append(ValidationIssue("cbs_operation_scope_not_domestic", "AMBITO_OPERACAO deve ser domestica; importação/exportação estão fora do recorte.", event_id=event_id, scenario_id=scenario_id))
 
     supply_date = _coerce_date_or_none(attrs["DT_FORNECIMENTO"])
     if supply_date is None or not (rules.nfe_mandatory_from <= supply_date <= _ASSESSMENT_END_DATE):
