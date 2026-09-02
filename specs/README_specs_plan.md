@@ -81,6 +81,7 @@ Não fazem parte desse MVP:
 | 09 | `09_cbs_2026_regular_nfe55.md` | Como selecionar regras efetivas e calcular um primeiro recorte tributário? | motor tributário mínimo |
 | 10 | `10_counterfactual_tax_experiment.md` | Como executar vários pares `(rho, Theta)` sobre a mesma base? | experimento contrafactual |
 | 11 | `11_counterfactual_tax_comparison_report.md` | Como comparar resultados e produzir uma decisão auditável? | comparação/relatório de cenários |
+| 12 | `12_simples_2027_puro_hibrido.md` | Como comparar Simples 2027 puro vs híbrido sem confundir norma com hipótese de sensibilidade? | demonstração profissional com carga própria, créditos de cadeia e limiar CBS |
 | posterior | futura spec | Como gerar/projetar novas bases econômicas? | geração sintética, calibração e projeção |
 
 A spec 08 preserva desde cedo a possibilidade de calcular no futuro

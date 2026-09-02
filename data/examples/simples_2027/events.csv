@@ -1,0 +1,5 @@
+ID_EVENTO,DT_EVENTO,CLASSE_EVENTO,TIPO_EVENTO,DIRECAO,NATUREZA,VL_EVENTO_CENTS,VL_CUSTO_CENTS,MEIO_FINANCEIRO,CATEGORIA_DESPESA,COD_PART,COND_PAGTO,DOC_REF,HIST,ORIGEM,SPEC_VERSION
+S2027_E001,2027-01-02,TR,aporte_capital,in,financeiro,20000000,,caixa,,,na,CAP-2027-001,Aporte de capital para demo Simples 2027,sintética,spec_03_events_v1
+S2027_E002,2027-01-05,TR,compra_mercadoria_a_vista,in,bem,8500000,,caixa,,FORN_REGULAR_001,vista,NFE-2027-001,Compra domestica para revenda,sintética,spec_03_events_v1
+S2027_E003,2027-01-12,TR,venda_a_prazo,out,bem,7000000,5950000,clientes,,CLI_B2B_001,prazo,NFE-2027-002,Venda domestica B2B,sintética,spec_03_events_v1
+S2027_E004,2027-01-20,TR,venda_a_vista,out,bem,3000000,2550000,caixa,,CLI_B2C_001,vista,NFE-2027-003,Venda domestica B2C,sintética,spec_03_events_v1

@@ -104,7 +104,7 @@ def validate_canonical_workbook(path: str | Path) -> WorkbookArtifactSummary:
 
     if not EDITABLE_SHEETS.issubset(set(WORKBOOK_SHEETS)):
         raise AccountingInvariantError("Abas editaveis fora do contrato canonico.")
-    if {"FISCAL_RESULTADOS_OPERACAO", "FISCAL_APURACAO", "COMPARATIVO_CENARIOS"} & set(EDITABLE_SHEETS):
+    if {"FISCAL_RESULTADOS_OPERACAO", "FISCAL_APURACAO", "COMPARATIVO_CENARIOS", "SIMPLES_2027_RESULTADOS", "SIMPLES_2027_COMPARACAO"} & set(EDITABLE_SHEETS):
         raise AccountingInvariantError("Abas fiscais derivadas nao podem ser editaveis.")
 
     frames = {sheet_name: _read_table_frame(wb, sheet_name) for sheet_name in TABLE_NAMES}
@@ -128,6 +128,9 @@ def validate_canonical_workbook(path: str | Path) -> WorkbookArtifactSummary:
     _assert_row_count(row_counts, "FISCAL_RESULTADOS_OPERACAO", 4)
     _assert_row_count(row_counts, "FISCAL_APURACAO", 2)
     _assert_row_count(row_counts, "COMPARATIVO_CENARIOS", 1)
+    _assert_row_count(row_counts, "ANALISE_PARAM", 0)
+    _assert_row_count(row_counts, "SIMPLES_2027_RESULTADOS", 0)
+    _assert_row_count(row_counts, "SIMPLES_2027_COMPARACAO", 0)
 
     scenarios = frames["CENARIOS_TRIBUTARIOS"]
     if set(scenarios["ID_CENARIO"]) != {BASE_SCENARIO_ID, CONTROL_SCENARIO_ID}:

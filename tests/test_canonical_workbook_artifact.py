@@ -10,11 +10,14 @@ def test_build_canonical_workbook_artifact_from_cbs_fixture(tmp_path):
 
     assert output_path.exists()
     assert summary.path == output_path
-    assert summary.sheet_count == 26
+    assert summary.sheet_count == 29
     assert summary.row_counts["EVENTOS"] == 3
     assert summary.row_counts["FISCAL_RESULTADOS_OPERACAO"] == 4
     assert summary.row_counts["FISCAL_APURACAO"] == 2
     assert summary.row_counts["COMPARATIVO_CENARIOS"] == 1
+    assert summary.row_counts["ANALISE_PARAM"] == 0
+    assert summary.row_counts["SIMPLES_2027_RESULTADOS"] == 0
+    assert summary.row_counts["SIMPLES_2027_COMPARACAO"] == 0
     assert Decimal(str(summary.baseline_assessment["S_APUR"])) == Decimal("9")
     assert Decimal(str(summary.baseline_assessment["T_RECOLHER"])) == Decimal("0")
     assert Decimal(str(summary.control_comparison["DELTA_S_APUR"])) == Decimal("0")

@@ -1,0 +1,10 @@
+ID_EVENTO,ATRIBUTO_FISCAL,VALOR,TIPO_VALOR,ORIGEM
+S2027_E002,AMBITO_OPERACAO,domestica,str,sintética
+S2027_E002,REGIME_FORNECEDOR,ibs_cbs_regime_regular,str,sintética
+S2027_E002,DESTINACAO_AQUISICAO,revenda,str,sintética
+S2027_E003,AMBITO_OPERACAO,domestica,str,sintética
+S2027_E003,TIPO_CLIENTE,b2b,str,sintética
+S2027_E003,REGIME_ADQUIRENTE,ibs_cbs_regime_regular,str,sintética
+S2027_E004,AMBITO_OPERACAO,domestica,str,sintética
+S2027_E004,TIPO_CLIENTE,b2c,str,sintética
+S2027_E004,REGIME_ADQUIRENTE,consumidor_final,str,sintética

@@ -1,0 +1,3 @@
+ID_ANALISE,CHAVE_PARAM,VALOR,TIPO_VALOR,DESCRICAO
+DEMO_SIMPLES_2027,CBS_2027_ANALYSIS_RATE_FRACTION,0.09,decimal,Hipótese analítica para demonstração; não representa alíquota oficial da CBS 2027.
+DEMO_SIMPLES_2027,REGULAR_CREDIT_REALIZATION_FRACTION,1.0,decimal,Hipótese analítica de realização integral dos créditos elegíveis no período.

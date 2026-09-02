@@ -1,0 +1,7 @@
+ID_ENTIDADE,ATRIBUTO,VALOR,TIPO_VALOR,ORIGEM
+ENT_SIMPL_2027,NOME_EMPRESA,empresa comercial sintética,str,sintética
+ENT_SIMPL_2027,TIPO_PESSOA,pj,str,sintética
+ENT_SIMPL_2027,ATIVIDADE,comercio_revenda_mercadorias,str,sintética
+ENT_SIMPL_2027,OPTANTE_SIMPLES,true,bool,sintética
+ENT_SIMPL_2027,ANEXO_SIMPLES,I,str,sintética
+ENT_SIMPL_2027,RBT12_CENTS,120000000,int,sintética

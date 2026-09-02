@@ -210,6 +210,14 @@ TAX_PARAMETER_COLUMNS: tuple[str, ...] = (
     "VERSAO_REGRA",
 )
 
+TAX_ANALYSIS_PARAMETER_COLUMNS: tuple[str, ...] = (
+    "ID_ANALISE",
+    "CHAVE_PARAM",
+    "VALOR",
+    "TIPO_VALOR",
+    "DESCRICAO",
+)
+
 TAX_OPERATION_RESULT_COLUMNS: tuple[str, ...] = (
     "ID_CENARIO",
     "ID_EVENTO",

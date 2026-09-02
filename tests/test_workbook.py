@@ -19,6 +19,7 @@ from accounting_sim.canonical import (
     EVENT_COLUMNS,
     FISCAL_EVENT_ATTRIBUTE_COLUMNS,
     STATEMENT_MAPPING_COLUMNS,
+    TAX_ANALYSIS_PARAMETER_COLUMNS,
     TAX_PARAMETER_COLUMNS,
     TAX_SCENARIO_COLUMNS,
     AccountingPeriod,
@@ -43,6 +44,10 @@ from accounting_sim.statements import (
     validate_statement_mapping,
 )
 from accounting_sim.tax_comparison import CBS_2026_COUNTERFACTUAL_REPORT_SPEC_VERSION
+from accounting_sim.tax_simples_2027 import (
+    SIMPLES_2027_COMPARISON_COLUMNS,
+    SIMPLES_2027_SCENARIO_RESULT_COLUMNS,
+)
 from accounting_sim.tax_context import (
     TAX_INTERFACE_SPEC_VERSION,
     TaxContext,
@@ -55,6 +60,8 @@ from accounting_sim.workbook import (
     EVENT_WORKBOOK_COLUMNS,
     FISCAL_ASSESSMENT_WORKBOOK_COLUMNS,
     FISCAL_OPERATION_WORKBOOK_COLUMNS,
+    SIMPLES_2027_COMPARISON_WORKBOOK_COLUMNS,
+    SIMPLES_2027_SCENARIO_WORKBOOK_COLUMNS,
     TABLE_NAMES,
     WORKBOOK_SHEETS,
     WORKBOOK_SPEC_VERSION,
@@ -144,6 +151,7 @@ def workbook_inputs(
     events: pd.DataFrame | None = None,
     statement_mapping: pd.DataFrame | None = None,
     tax_context: TaxContext | None = None,
+    tax_analysis_parameters: pd.DataFrame | None = None,
 ) -> WorkbookInputs:
     chart_df = chart() if chart_of_accounts is None else chart_of_accounts
     return WorkbookInputs(
@@ -153,6 +161,7 @@ def workbook_inputs(
         events=canonical_events() if events is None else events,
         statement_mapping=build_default_statement_mapping(chart_df) if statement_mapping is None else statement_mapping,
         tax_context=tax_context,
+        tax_analysis_parameters=tax_analysis_parameters,
     )
 
 
@@ -284,6 +293,74 @@ def cbs_workbook_inputs(tax_context: TaxContext | None = None) -> WorkbookInputs
     )
 
 
+def simples_fixture_dir():
+    return Path(__file__).resolve().parents[1] / "data/examples/simples_2027"
+
+
+def simples_events() -> pd.DataFrame:
+    events = pd.read_csv(simples_fixture_dir() / "events.csv", dtype=str, keep_default_na=False)
+    events["DT_EVENTO"] = pd.to_datetime(events["DT_EVENTO"]).dt.date
+    events["VL_EVENTO_CENTS"] = events["VL_EVENTO_CENTS"].astype(int)
+    events["VL_CUSTO_CENTS"] = events["VL_CUSTO_CENTS"].replace("", pd.NA)
+    mask = events["VL_CUSTO_CENTS"].notna()
+    events.loc[mask, "VL_CUSTO_CENTS"] = events.loc[mask, "VL_CUSTO_CENTS"].astype(int)
+    for column in ("MEIO_FINANCEIRO", "CATEGORIA_DESPESA", "COD_PART", "DOC_REF"):
+        events[column] = events[column].replace("", pd.NA)
+    events.loc[events["TIPO_EVENTO"] == EventType.SALE_CREDIT.value, "MEIO_FINANCEIRO"] = pd.NA
+    return events.loc[:, list(EVENT_COLUMNS)]
+
+
+def simples_tax_context() -> TaxContext:
+    scenarios = pd.read_csv(simples_fixture_dir() / "tax_scenarios.csv", dtype=str, keep_default_na=False)
+    scenarios["DT_REFERENCIA_NORMATIVA"] = pd.to_datetime(scenarios["DT_REFERENCIA_NORMATIVA"]).dt.date
+    scenarios["E_BASELINE"] = scenarios["E_BASELINE"].map(lambda value: str(value).lower() == "true")
+    scenarios["ATIVO"] = scenarios["ATIVO"].map(lambda value: str(value).lower() == "true")
+    parameters = pd.read_csv(simples_fixture_dir() / "tax_parameters.csv", dtype=str, keep_default_na=False)
+    for column in ("VIG_INI", "DATA_CONSULTA"):
+        parameters[column] = pd.to_datetime(parameters[column]).dt.date
+    parameters["VIG_FIM"] = parameters["VIG_FIM"].map(
+        lambda value: None if str(value).strip() == "" else pd.to_datetime(value).date()
+    )
+    return TaxContext(
+        entity_profile=pd.read_csv(simples_fixture_dir() / "entity_profile.csv", dtype=str, keep_default_na=False),
+        fiscal_event_attributes=pd.read_csv(simples_fixture_dir() / "fiscal_event_attributes.csv", dtype=str, keep_default_na=False),
+        tax_scenarios=scenarios.loc[:, list(TAX_SCENARIO_COLUMNS)],
+        tax_parameters=parameters.loc[:, list(TAX_PARAMETER_COLUMNS)],
+    )
+
+
+def simples_analysis_parameters() -> pd.DataFrame:
+    return pd.read_csv(simples_fixture_dir() / "analysis_parameters.csv", dtype=str, keep_default_na=False).loc[
+        :, list(TAX_ANALYSIS_PARAMETER_COLUMNS)
+    ]
+
+
+def simples_workbook_inputs(
+    tax_context: TaxContext | None = None,
+    analysis_parameters: pd.DataFrame | None = None,
+) -> WorkbookInputs:
+    period = AccountingPeriod(date(2027, 1, 1), date(2027, 1, 31))
+    config = SimulationConfig(
+        simulation_id="DEMO_SIMPLES_2027",
+        start_date=period.start_date,
+        end_date=period.end_date,
+        currency="BRL",
+        seed=0,
+        scenario_name="simples_2027_puro_vs_hibrido",
+        spec_version=WORKBOOK_SPEC_VERSION,
+    )
+    chart_df = build_default_commercial_chart(period.start_date)
+    return WorkbookInputs(
+        simulation_config=config,
+        chart_of_accounts=chart_df,
+        account_role_mapping=build_default_account_role_mapping(),
+        events=simples_events(),
+        statement_mapping=build_default_statement_mapping(chart_df),
+        tax_context=tax_context if tax_context is not None else simples_tax_context(),
+        tax_analysis_parameters=analysis_parameters if analysis_parameters is not None else simples_analysis_parameters(),
+    )
+
+
 def build_case(tmp_path, inputs: WorkbookInputs | None = None):
     path = tmp_path / "case.xlsx"
     build_workbook(inputs or workbook_inputs(), path)
@@ -380,9 +457,12 @@ def test_workbook_sheets_are_exactly_in_canonical_order(tmp_path):
         "DRE",
         "CENARIOS_TRIBUTARIOS",
         "FISCAL_PARAM",
+        "ANALISE_PARAM",
         "FISCAL_RESULTADOS_OPERACAO",
         "FISCAL_APURACAO",
         "COMPARATIVO_CENARIOS",
+        "SIMPLES_2027_RESULTADOS",
+        "SIMPLES_2027_COMPARACAO",
         "VALIDACOES",
         "PROVENIENCIA",
     )
@@ -406,11 +486,15 @@ def test_tax_output_sheets_are_derived_not_editable(tmp_path):
         "FISCAL_RESULTADOS_OPERACAO",
         "FISCAL_APURACAO",
         "COMPARATIVO_CENARIOS",
+        "SIMPLES_2027_RESULTADOS",
+        "SIMPLES_2027_COMPARACAO",
     }.issubset(set(wb.sheetnames))
     assert {
         "FISCAL_RESULTADOS_OPERACAO",
         "FISCAL_APURACAO",
         "COMPARATIVO_CENARIOS",
+        "SIMPLES_2027_RESULTADOS",
+        "SIMPLES_2027_COMPARACAO",
     }.isdisjoint(EDITABLE_SHEETS)
 
 
@@ -464,6 +548,7 @@ def test_inputs_sheet_guides_editable_sheets_by_care_level(tmp_path):
     assert "ENTRADAS DE USO COMUM" in text
     assert "CONFIGURAÇÕES ESTRUTURAIS" in text
     assert "PARÂMETROS NORMATIVOS - ALTA SENSIBILIDADE" in text
+    assert "HIPÓTESES ANALÍTICAS - NÃO NORMATIVAS" in text
     for sheet_name in EDITABLE_SHEETS:
         assert sheet_name in text
         assert f"#'{sheet_name}'!A1" in hyperlink_targets(ws)
@@ -556,9 +641,12 @@ def test_all_previous_technical_sheets_remain_available_after_presentation_layer
         "DRE",
         "CENARIOS_TRIBUTARIOS",
         "FISCAL_PARAM",
+        "ANALISE_PARAM",
         "FISCAL_RESULTADOS_OPERACAO",
         "FISCAL_APURACAO",
         "COMPARATIVO_CENARIOS",
+        "SIMPLES_2027_RESULTADOS",
+        "SIMPLES_2027_COMPARACAO",
         "VALIDACOES",
         "PROVENIENCIA",
     }
@@ -599,8 +687,11 @@ def test_named_tables_exist_and_cover_expected_row_counts(tmp_path):
         "FISCAL_RESULTADOS_OPERACAO": 0,
         "FISCAL_APURACAO": 0,
         "COMPARATIVO_CENARIOS": 0,
-        "VALIDACOES": 12,
-        "PROVENIENCIA": 14,
+        "ANALISE_PARAM": 0,
+        "SIMPLES_2027_RESULTADOS": 0,
+        "SIMPLES_2027_COMPARACAO": 0,
+        "VALIDACOES": 13,
+        "PROVENIENCIA": 18,
     }
     for sheet_name, table_name in TABLE_NAMES.items():
         assert table_name in wb[sheet_name].tables
@@ -961,10 +1052,14 @@ def test_one_active_tax_scenario_materializes_empty_tax_outputs(tmp_path):
         "FISCAL_RESULTADOS_OPERACAO",
         "FISCAL_APURACAO",
         "COMPARATIVO_CENARIOS",
+        "SIMPLES_2027_RESULTADOS",
+        "SIMPLES_2027_COMPARACAO",
     }.issubset(set(wb.sheetnames))
     assert sheet_frame(path, "FISCAL_RESULTADOS_OPERACAO").empty
     assert sheet_frame(path, "FISCAL_APURACAO").empty
     assert sheet_frame(path, "COMPARATIVO_CENARIOS").empty
+    assert sheet_frame(path, "SIMPLES_2027_RESULTADOS").empty
+    assert sheet_frame(path, "SIMPLES_2027_COMPARACAO").empty
 
 
 def test_empty_tax_context_materializes_empty_tax_output_headers(tmp_path):
@@ -973,9 +1068,13 @@ def test_empty_tax_context_materializes_empty_tax_output_headers(tmp_path):
     assert tuple(sheet_frame(path, "FISCAL_RESULTADOS_OPERACAO").columns) == FISCAL_OPERATION_WORKBOOK_COLUMNS
     assert tuple(sheet_frame(path, "FISCAL_APURACAO").columns) == FISCAL_ASSESSMENT_WORKBOOK_COLUMNS
     assert tuple(sheet_frame(path, "COMPARATIVO_CENARIOS").columns) == COUNTERFACTUAL_COMPARISON_WORKBOOK_COLUMNS
+    assert tuple(sheet_frame(path, "SIMPLES_2027_RESULTADOS").columns) == SIMPLES_2027_SCENARIO_WORKBOOK_COLUMNS
+    assert tuple(sheet_frame(path, "SIMPLES_2027_COMPARACAO").columns) == SIMPLES_2027_COMPARISON_WORKBOOK_COLUMNS
     assert sheet_frame(path, "FISCAL_RESULTADOS_OPERACAO").empty
     assert sheet_frame(path, "FISCAL_APURACAO").empty
     assert sheet_frame(path, "COMPARATIVO_CENARIOS").empty
+    assert sheet_frame(path, "SIMPLES_2027_RESULTADOS").empty
+    assert sheet_frame(path, "SIMPLES_2027_COMPARACAO").empty
 
 
 def test_valid_counterfactual_tax_context_populates_fiscal_output_sheets(tmp_path):
@@ -992,6 +1091,69 @@ def test_valid_counterfactual_tax_context_populates_fiscal_output_sheets(tmp_pat
     assert list(assessment["ID_CENARIO"]) == ["CBS_2026_BASE", "CBS_2026_CONTROLE"]
     assert comparison.iloc[0]["ID_CENARIO_BASE"] == "CBS_2026_BASE"
     assert comparison.iloc[0]["ID_CENARIO"] == "CBS_2026_CONTROLE"
+
+
+def test_simples_2027_workbook_populates_specific_output_sheets(tmp_path):
+    path, wb = build_case(tmp_path, simples_workbook_inputs())
+
+    results = sheet_frame(path, "SIMPLES_2027_RESULTADOS")
+    comparison = sheet_frame(path, "SIMPLES_2027_COMPARACAO")
+    cbs_outputs = sheet_frame(path, "FISCAL_RESULTADOS_OPERACAO")
+
+    assert results.shape[0] == 2
+    assert comparison.shape[0] == 5
+    assert cbs_outputs.empty
+    assert tuple(results.columns) == SIMPLES_2027_SCENARIO_WORKBOOK_COLUMNS
+    assert tuple(comparison.columns) == SIMPLES_2027_COMPARISON_WORKBOOK_COLUMNS
+    assert tuple(sheet_frame(path, "ANALISE_PARAM").columns) == TAX_ANALYSIS_PARAMETER_COLUMNS
+    assert "ANALISE_PARAM" in EDITABLE_SHEETS
+    assert "SIMPLES_2027_RESULTADOS" not in EDITABLE_SHEETS
+    assert "SIMPLES_2027_COMPARACAO" not in EDITABLE_SHEETS
+
+    puro = results.loc[results["ID_CENARIO"] == "SIMPLES_2027_PURO"].iloc[0]
+    hibrido = results.loc[results["ID_CENARIO"] == "SIMPLES_2027_HIBRIDO"].iloc[0]
+    assert decimal_value(puro["RECEITA_MES"]) == Decimal("100000.00")
+    assert decimal_value(puro["DAS_TOTAL"]) == Decimal("8825.00")
+    assert decimal_value(hibrido["ENCARGO_TRIBUTARIO_COMPARAVEL"]) == Decimal("8822.13")
+    encargo = comparison.loc[comparison["METRICA"] == "ENCARGO_TRIBUTARIO_COMPARAVEL"].iloc[0]
+    assert decimal_value(encargo["DELTA"]) == Decimal("-2.87")
+
+    resumo_text = sheet_text(wb["RESUMO"])
+    comparacao_text = sheet_text(wb["COMPARACAO"])
+    assert "SIMPLES 2027 - DEMO" in resumo_text
+    assert "CBS 2027 - taxa usada" in comparacao_text
+    assert "HIPÓTESE ANALÍTICA" in comparacao_text
+    assert "Alíquota de equilíbrio da CBS" in comparacao_text
+    assert "A análise não define automaticamente o melhor regime." in comparacao_text
+    assert "n/a" in comparacao_text
+
+
+def test_simples_2027_workbook_regeneration_discards_derived_edits_and_uses_analysis_input(tmp_path):
+    path, _ = build_case(tmp_path, simples_workbook_inputs())
+    wb = load_workbook(path)
+    wb["SIMPLES_2027_RESULTADOS"]["A2"] = "ADULTERADO"
+    wb["SIMPLES_2027_COMPARACAO"]["F2"] = 999999.99
+    analysis_ws = wb["ANALISE_PARAM"]
+    headers = [cell.value for cell in analysis_ws[1]]
+    value_col = headers.index("VALOR") + 1
+    key_col = headers.index("CHAVE_PARAM") + 1
+    for row in range(2, analysis_ws.max_row + 1):
+        if analysis_ws.cell(row=row, column=key_col).value == "CBS_2027_ANALYSIS_RATE_FRACTION":
+            analysis_ws.cell(row=row, column=value_col, value="0.08")
+    wb.save(path)
+
+    regenerated = tmp_path / "simples_regenerated.xlsx"
+    regenerate_workbook(path, regenerated)
+
+    results = sheet_frame(regenerated, "SIMPLES_2027_RESULTADOS")
+    comparison = sheet_frame(regenerated, "SIMPLES_2027_COMPARACAO")
+    hibrido = results.loc[results["ID_CENARIO"] == "SIMPLES_2027_HIBRIDO"].iloc[0]
+    assert hibrido["ID_CENARIO"] == "SIMPLES_2027_HIBRIDO"
+    assert decimal_value(hibrido["CBS_DEBITO_REGULAR"]) == Decimal("8000.00")
+    assert decimal_value(hibrido["CBS_CREDITO_EMPRESA_POTENCIAL"]) == Decimal("6800.00")
+    assert decimal_value(comparison.loc[comparison["METRICA"] == "ENCARGO_TRIBUTARIO_COMPARAVEL", "DELTA"].iloc[0]) == Decimal("-152.87")
+    params = sheet_frame(regenerated, "FISCAL_PARAM")
+    assert "CBS_2027_ANALYSIS_RATE_FRACTION" not in set(params["CHAVE_PARAM"])
 
 
 def test_fiscal_outputs_are_presented_in_reais_and_preserve_unknowns_as_blank(tmp_path):

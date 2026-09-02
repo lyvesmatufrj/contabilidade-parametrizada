@@ -1,0 +1,3 @@
+ID_CENARIO,ID_ENTIDADE,DESCRICAO,E_BASELINE,DT_REFERENCIA_NORMATIVA,REGIME_ENTIDADE,REGIME_IR,REGIME_CONSUMO,REGIME_ESPECIAL,ID_VERSAO_NORMATIVA,ATIVO
+SIMPLES_2027_PURO,ENT_SIMPL_2027,Simples Nacional puro,true,2027-01-31,simples_nacional,simples_nacional,simples_ibs_cbs_das,,SIMPLES_2027_H1_V1,true
+SIMPLES_2027_HIBRIDO,ENT_SIMPL_2027,Simples Nacional hibrido,false,2027-01-31,simples_nacional,simples_nacional,ibs_cbs_regime_regular,,SIMPLES_2027_H1_V1,true

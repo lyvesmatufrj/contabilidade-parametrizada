@@ -32,6 +32,7 @@ from accounting_sim.canonical import (
     LEDGER_VIEW_COLUMNS,
     POSTING_COLUMNS,
     TAX_ASSESSMENT_RESULT_COLUMNS,
+    TAX_ANALYSIS_PARAMETER_COLUMNS,
     TAX_OPERATION_RESULT_COLUMNS,
     TAX_PARAMETER_COLUMNS,
     TAX_SCENARIO_COLUMNS,
@@ -83,9 +84,17 @@ from accounting_sim.tax_comparison import (
     CBS_2026_COUNTERFACTUAL_REPORT_SPEC_VERSION,
     run_cbs_2026_counterfactual_report,
 )
+from accounting_sim.tax_simples_2027 import (
+    SIMPLES_2027_COMPARISON_COLUMNS,
+    SIMPLES_2027_RULE_SPEC_VERSION,
+    SIMPLES_2027_SCENARIO_RESULT_COLUMNS,
+    Simples2027CounterfactualReport,
+    run_simples_2027_counterfactual_report,
+    validate_tax_analysis_parameters,
+)
 
 
-WORKBOOK_SPEC_VERSION = "spec_11_excel_workbook_v1"
+WORKBOOK_SPEC_VERSION = "spec_12_excel_workbook_v1"
 
 WORKBOOK_SHEETS: tuple[str, ...] = (
     "RESUMO",
@@ -109,9 +118,12 @@ WORKBOOK_SHEETS: tuple[str, ...] = (
     "DRE",
     "CENARIOS_TRIBUTARIOS",
     "FISCAL_PARAM",
+    "ANALISE_PARAM",
     "FISCAL_RESULTADOS_OPERACAO",
     "FISCAL_APURACAO",
     "COMPARATIVO_CENARIOS",
+    "SIMPLES_2027_RESULTADOS",
+    "SIMPLES_2027_COMPARACAO",
     "VALIDACOES",
     "PROVENIENCIA",
 )
@@ -127,6 +139,7 @@ EDITABLE_SHEETS = frozenset(
         "MAPEAMENTO_DF",
         "CENARIOS_TRIBUTARIOS",
         "FISCAL_PARAM",
+        "ANALISE_PARAM",
     }
 )
 
@@ -275,6 +288,45 @@ COUNTERFACTUAL_COMPARISON_WORKBOOK_COLUMNS: tuple[str, ...] = (
     "DELTA_E_DRE",
     "DELTA_C_SALDO",
 )
+SIMPLES_2027_SCENARIO_WORKBOOK_COLUMNS: tuple[str, ...] = (
+    "ID_CENARIO",
+    "REGIME_CONSUMO",
+    "RECEITA_MES",
+    "RBT12",
+    "ALIQUOTA_EFETIVA_SIMPLES",
+    "DAS_TOTAL",
+    "DAS_CBS",
+    "DAS_IBS",
+    "DAS_OUTROS",
+    "CBS_REGULAR_RATE_FRACTION",
+    "CBS_RATE_SOURCE",
+    "CBS_DEBITO_REGULAR",
+    "CBS_CREDITO_EMPRESA_POTENCIAL",
+    "CBS_CREDITO_EMPRESA_MODELADO",
+    "CBS_VALOR_LIQUIDO_MODELADO",
+    "CBS_SALDO_CREDOR_MODELADO",
+    "IBS_REGULAR_RATE_FRACTION",
+    "IBS_DEBITO_REGULAR",
+    "IBS_CREDITO_EMPRESA_POTENCIAL",
+    "IBS_CREDITO_EMPRESA_MODELADO",
+    "IBS_VALOR_LIQUIDO_MODELADO",
+    "IBS_SALDO_CREDOR_MODELADO",
+    "ENCARGO_TRIBUTARIO_COMPARAVEL",
+    "CLIENTE_B2B_CREDITO_CBS_POTENCIAL",
+    "CLIENTE_B2B_CREDITO_IBS_POTENCIAL",
+    "STATUS_RESULTADO",
+    "VERSAO_REGRA",
+)
+SIMPLES_2027_COMPARISON_WORKBOOK_COLUMNS: tuple[str, ...] = (
+    "ID_CENARIO_BASE",
+    "ID_CENARIO",
+    "METRICA",
+    "BASELINE",
+    "ALTERNATIVO",
+    "DELTA",
+    "STATUS_BASELINE",
+    "STATUS_ALTERNATIVO",
+)
 
 TABLE_NAMES: Mapping[str, str] = {
     "CONFIG": "tbl_CONFIG",
@@ -294,9 +346,12 @@ TABLE_NAMES: Mapping[str, str] = {
     "DRE": "tbl_DRE",
     "CENARIOS_TRIBUTARIOS": "tbl_CENARIOS_TRIBUTARIOS",
     "FISCAL_PARAM": "tbl_FISCAL_PARAM",
+    "ANALISE_PARAM": "tbl_ANALISE_PARAM",
     "FISCAL_RESULTADOS_OPERACAO": "tbl_FISCAL_RESULTADOS_OPERACAO",
     "FISCAL_APURACAO": "tbl_FISCAL_APURACAO",
     "COMPARATIVO_CENARIOS": "tbl_COMPARATIVO_CENARIOS",
+    "SIMPLES_2027_RESULTADOS": "tbl_SIMPLES_2027_RESULTADOS",
+    "SIMPLES_2027_COMPARACAO": "tbl_SIMPLES_2027_COMPARACAO",
     "VALIDACOES": "tbl_VALIDACOES",
     "PROVENIENCIA": "tbl_PROVENIENCIA",
 }
@@ -310,6 +365,7 @@ class WorkbookInputs:
     events: pd.DataFrame
     statement_mapping: pd.DataFrame | None = None
     tax_context: TaxContext | None = None
+    tax_analysis_parameters: pd.DataFrame | None = None
 
 
 def build_workbook(
@@ -321,6 +377,11 @@ def build_workbook(
     simulation_config = inputs.simulation_config
     period = AccountingPeriod(simulation_config.start_date, simulation_config.end_date)
     tax_context = _copy_tax_context(inputs.tax_context) if inputs.tax_context is not None else build_empty_tax_context()
+    tax_analysis_parameters = (
+        pd.DataFrame(columns=TAX_ANALYSIS_PARAMETER_COLUMNS, dtype=object)
+        if inputs.tax_analysis_parameters is None
+        else inputs.tax_analysis_parameters.copy(deep=True)
+    )
     raw_chart_of_accounts = inputs.chart_of_accounts.copy(deep=True)
     account_role_mapping = inputs.account_role_mapping.copy(deep=True)
     statement_mapping = (
@@ -338,6 +399,7 @@ def build_workbook(
     entity_report = validate_entity_profile(tax_context.entity_profile)
     fiscal_event_report = validate_fiscal_event_attributes(tax_context.fiscal_event_attributes, events)
     tax_parameter_report = validate_tax_parameters(tax_context.tax_parameters)
+    tax_analysis_report = validate_tax_analysis_parameters(tax_analysis_parameters)
     tax_scenario_report = validate_tax_scenarios(tax_context.tax_scenarios, tax_context.entity_profile, tax_context.tax_parameters)
     tax_context_report = validate_tax_context(tax_context, events)
     _raise_if_invalid("PLANO_CONTAS", chart_report)
@@ -347,6 +409,7 @@ def build_workbook(
     _raise_if_invalid("ENTIDADE", entity_report)
     _raise_if_invalid("EVENTOS_FISCAIS", fiscal_event_report)
     _raise_if_invalid("FISCAL_PARAM", tax_parameter_report)
+    _raise_if_invalid("ANALISE_PARAM", tax_analysis_report)
     _raise_if_invalid("CENARIOS_TRIBUTARIOS", tax_scenario_report)
     _raise_if_invalid("CONTEXTO_TRIBUTARIO", tax_context_report)
 
@@ -372,11 +435,22 @@ def build_workbook(
     tax_operation_results = pd.DataFrame(columns=TAX_OPERATION_RESULT_COLUMNS, dtype=object)
     tax_assessment_results = pd.DataFrame(columns=TAX_ASSESSMENT_RESULT_COLUMNS, dtype=object)
     counterfactual_comparison = pd.DataFrame(columns=COUNTERFACTUAL_COMPARISON_COLUMNS, dtype=object)
+    simples_scenario_results = pd.DataFrame(columns=SIMPLES_2027_SCENARIO_RESULT_COLUMNS, dtype=object)
+    simples_comparison_results = pd.DataFrame(columns=SIMPLES_2027_COMPARISON_COLUMNS, dtype=object)
+    simples_report: Simples2027CounterfactualReport | None = None
     if _active_tax_scenario_count(tax_context) >= 2:
-        counterfactual_report = run_cbs_2026_counterfactual_report(events, tax_context)
-        tax_operation_results = counterfactual_report.operation_results.copy(deep=True)
-        tax_assessment_results = counterfactual_report.assessment_results.copy(deep=True)
-        counterfactual_comparison = counterfactual_report.comparison_results.copy(deep=True)
+        experiment_kind = _detect_supported_tax_experiment(tax_context)
+        if experiment_kind == "cbs_2026":
+            counterfactual_report = run_cbs_2026_counterfactual_report(events, tax_context)
+            tax_operation_results = counterfactual_report.operation_results.copy(deep=True)
+            tax_assessment_results = counterfactual_report.assessment_results.copy(deep=True)
+            counterfactual_comparison = counterfactual_report.comparison_results.copy(deep=True)
+        elif experiment_kind == "simples_2027":
+            simples_report = run_simples_2027_counterfactual_report(events, tax_context, tax_analysis_parameters)
+            simples_scenario_results = simples_report.scenario_results.copy(deep=True)
+            simples_comparison_results = simples_report.comparison_results.copy(deep=True)
+        else:
+            raise SchemaValidationError("Experimento tributário com dois ou mais cenários ativos não suportado pelo workbook.")
 
     validations = _build_validations(
         {
@@ -388,19 +462,22 @@ def build_workbook(
             "EVENTOS_FISCAIS": fiscal_event_report,
             "CENARIOS_TRIBUTARIOS": tax_scenario_report,
             "FISCAL_PARAM": tax_parameter_report,
+            "ANALISE_PARAM": tax_analysis_report,
             "CONTEXTO_TRIBUTARIO": tax_context_report,
             "LANCAMENTOS_PARTIDAS": posting_report,
             "RAZAO_BALANCETE": ledger_report,
             "DEMONSTRACOES": statements_report,
         }
     )
-    provenance = _build_provenance(simulation_config, events, rule_version, tax_context)
+    provenance = _build_provenance(simulation_config, events, rule_version, tax_context, tax_analysis_parameters, simples_report)
 
     balance_sheet_workbook = _balance_sheet_to_workbook(financial_statements.balance_sheet)
     income_statement_workbook = _income_statement_to_workbook(financial_statements.income_statement)
     tax_operation_results_workbook = _tax_operations_to_workbook(tax_operation_results)
     tax_assessment_results_workbook = _tax_assessment_to_workbook(tax_assessment_results)
     counterfactual_comparison_workbook = _tax_comparison_to_workbook(counterfactual_comparison)
+    simples_scenario_results_workbook = _simples_scenarios_to_workbook(simples_scenario_results)
+    simples_comparison_results_workbook = _simples_comparison_to_workbook(simples_comparison_results)
 
     wb = Workbook()
     wb.remove(wb.active)
@@ -414,9 +491,20 @@ def build_workbook(
         tax_operation_results_workbook,
         tax_assessment_results_workbook,
         counterfactual_comparison_workbook,
+        simples_scenario_results_workbook,
+        simples_comparison_results_workbook,
+        simples_report,
     )
     _write_inputs_guide_sheet(wb)
-    _write_comparison_sheet(wb, tax_context.tax_scenarios, tax_assessment_results_workbook, counterfactual_comparison_workbook)
+    _write_comparison_sheet(
+        wb,
+        tax_context.tax_scenarios,
+        tax_assessment_results_workbook,
+        counterfactual_comparison_workbook,
+        simples_scenario_results_workbook,
+        simples_comparison_results_workbook,
+        simples_report,
+    )
     _write_readme(wb)
     _write_table(wb, "CONFIG", _config_to_frame(simulation_config))
     _write_table(wb, "ENTIDADE", _serialize_frame(tax_context.entity_profile, ENTITY_PROFILE_COLUMNS))
@@ -435,9 +523,12 @@ def build_workbook(
     _write_table(wb, "DRE", income_statement_workbook)
     _write_table(wb, "CENARIOS_TRIBUTARIOS", _serialize_frame(tax_context.tax_scenarios, TAX_SCENARIO_COLUMNS))
     _write_table(wb, "FISCAL_PARAM", _serialize_frame(tax_context.tax_parameters, TAX_PARAMETER_COLUMNS))
+    _write_table(wb, "ANALISE_PARAM", _serialize_frame(tax_analysis_parameters, TAX_ANALYSIS_PARAMETER_COLUMNS))
     _write_table(wb, "FISCAL_RESULTADOS_OPERACAO", tax_operation_results_workbook)
     _write_table(wb, "FISCAL_APURACAO", tax_assessment_results_workbook)
     _write_table(wb, "COMPARATIVO_CENARIOS", counterfactual_comparison_workbook)
+    _write_table(wb, "SIMPLES_2027_RESULTADOS", simples_scenario_results_workbook)
+    _write_table(wb, "SIMPLES_2027_COMPARACAO", simples_comparison_results_workbook)
     _write_table(wb, "VALIDACOES", validations)
     _write_table(wb, "PROVENIENCIA", provenance)
     _apply_editable_validations(wb)
@@ -467,13 +558,14 @@ def load_workbook_inputs(path: str | Path) -> WorkbookInputs:
     statement_mapping = _read_table_frame(wb["MAPEAMENTO_DF"], STATEMENT_MAPPING_COLUMNS)
     tax_scenarios = _frame_to_tax_scenarios(_read_table_frame(wb["CENARIOS_TRIBUTARIOS"], TAX_SCENARIO_COLUMNS))
     tax_parameters = _frame_to_tax_parameters(_read_table_frame(wb["FISCAL_PARAM"], TAX_PARAMETER_COLUMNS))
+    tax_analysis_parameters = _frame_to_tax_analysis_parameters(_read_table_frame(wb["ANALISE_PARAM"], TAX_ANALYSIS_PARAMETER_COLUMNS))
     tax_context = TaxContext(
         entity_profile=entity_profile,
         fiscal_event_attributes=fiscal_event_attributes,
         tax_scenarios=tax_scenarios,
         tax_parameters=tax_parameters,
     )
-    return WorkbookInputs(config, chart_of_accounts, account_role_mapping, events, statement_mapping, tax_context)
+    return WorkbookInputs(config, chart_of_accounts, account_role_mapping, events, statement_mapping, tax_context, tax_analysis_parameters)
 
 
 def regenerate_workbook(
@@ -593,6 +685,13 @@ def _frame_to_tax_parameters(frame: pd.DataFrame) -> pd.DataFrame:
     return tax_parameters.loc[:, list(TAX_PARAMETER_COLUMNS)]
 
 
+def _frame_to_tax_analysis_parameters(frame: pd.DataFrame) -> pd.DataFrame:
+    analysis_parameters = frame.copy()
+    for column in TAX_ANALYSIS_PARAMETER_COLUMNS:
+        analysis_parameters[column] = analysis_parameters[column].map(_generic_value_to_text)
+    return analysis_parameters.loc[:, list(TAX_ANALYSIS_PARAMETER_COLUMNS)]
+
+
 def _build_validations(reports_by_stage: Mapping[str, ValidationReport]) -> pd.DataFrame:
     rows: list[dict[str, object]] = []
     for stage, report in reports_by_stage.items():
@@ -634,7 +733,14 @@ def _validation_issue_to_row(stage: str, issue: ValidationIssue) -> dict[str, ob
     }
 
 
-def _build_provenance(config: SimulationConfig, events: pd.DataFrame, rule_version: str, tax_context: TaxContext) -> pd.DataFrame:
+def _build_provenance(
+    config: SimulationConfig,
+    events: pd.DataFrame,
+    rule_version: str,
+    tax_context: TaxContext,
+    tax_analysis_parameters: pd.DataFrame,
+    simples_report: Simples2027CounterfactualReport | None,
+) -> pd.DataFrame:
     event_versions = sorted({str(value) for value in events["SPEC_VERSION"].dropna()})
     tax_normative_versions = sorted({str(value) for value in tax_context.tax_parameters["ID_VERSAO_NORMATIVA"].dropna() if str(value).strip()})
     tax_context_configured = any(
@@ -651,6 +757,7 @@ def _build_provenance(config: SimulationConfig, events: pd.DataFrame, rule_versi
         ("financial_statement_spec_version", FINANCIAL_STATEMENT_SPEC_VERSION),
         ("tax_interface_spec_version", TAX_INTERFACE_SPEC_VERSION),
         ("counterfactual_report_spec_version", CBS_2026_COUNTERFACTUAL_REPORT_SPEC_VERSION),
+        ("simples_2027_rule_spec_version", SIMPLES_2027_RULE_SPEC_VERSION),
         ("simulation_id", config.simulation_id),
         ("scenario_name", config.scenario_name),
         ("simulation_spec_version", config.spec_version),
@@ -658,6 +765,9 @@ def _build_provenance(config: SimulationConfig, events: pd.DataFrame, rule_versi
         ("statement_mapping_source", "MAPEAMENTO_DF"),
         ("tax_context_configured", str(tax_context_configured).upper()),
         ("tax_normative_versions", ",".join(tax_normative_versions)),
+        ("analysis_id", _analysis_id(tax_analysis_parameters)),
+        ("analysis_parameters_present", str(not tax_analysis_parameters.empty).upper()),
+        ("cbs_rate_source", simples_report.cbs_rate_source if simples_report is not None else None),
         ("currency", config.currency),
         ("chart_source", "template_or_input_PLANO_CONTAS"),
         ("event_spec_versions", ",".join(event_versions)),
@@ -759,6 +869,46 @@ def _tax_comparison_to_workbook(comparison_results: pd.DataFrame) -> pd.DataFram
     )
 
 
+def _simples_scenarios_to_workbook(scenario_results: pd.DataFrame) -> pd.DataFrame:
+    return _replace_optional_money_columns(
+        scenario_results,
+        {
+            "RECEITA_MES_CENTS": "RECEITA_MES",
+            "RBT12_CENTS": "RBT12",
+            "DAS_TOTAL_CENTS": "DAS_TOTAL",
+            "DAS_CBS_CENTS": "DAS_CBS",
+            "DAS_IBS_CENTS": "DAS_IBS",
+            "DAS_OUTROS_CENTS": "DAS_OUTROS",
+            "CBS_DEBITO_REGULAR_CENTS": "CBS_DEBITO_REGULAR",
+            "CBS_CREDITO_EMPRESA_POTENCIAL_CENTS": "CBS_CREDITO_EMPRESA_POTENCIAL",
+            "CBS_CREDITO_EMPRESA_MODELADO_CENTS": "CBS_CREDITO_EMPRESA_MODELADO",
+            "CBS_VALOR_LIQUIDO_MODELADO_CENTS": "CBS_VALOR_LIQUIDO_MODELADO",
+            "CBS_SALDO_CREDOR_MODELADO_CENTS": "CBS_SALDO_CREDOR_MODELADO",
+            "IBS_DEBITO_REGULAR_CENTS": "IBS_DEBITO_REGULAR",
+            "IBS_CREDITO_EMPRESA_POTENCIAL_CENTS": "IBS_CREDITO_EMPRESA_POTENCIAL",
+            "IBS_CREDITO_EMPRESA_MODELADO_CENTS": "IBS_CREDITO_EMPRESA_MODELADO",
+            "IBS_VALOR_LIQUIDO_MODELADO_CENTS": "IBS_VALOR_LIQUIDO_MODELADO",
+            "IBS_SALDO_CREDOR_MODELADO_CENTS": "IBS_SALDO_CREDOR_MODELADO",
+            "ENCARGO_TRIBUTARIO_COMPARAVEL_CENTS": "ENCARGO_TRIBUTARIO_COMPARAVEL",
+            "CLIENTE_B2B_CREDITO_CBS_POTENCIAL_CENTS": "CLIENTE_B2B_CREDITO_CBS_POTENCIAL",
+            "CLIENTE_B2B_CREDITO_IBS_POTENCIAL_CENTS": "CLIENTE_B2B_CREDITO_IBS_POTENCIAL",
+        },
+        SIMPLES_2027_SCENARIO_WORKBOOK_COLUMNS,
+    )
+
+
+def _simples_comparison_to_workbook(comparison_results: pd.DataFrame) -> pd.DataFrame:
+    return _replace_optional_money_columns(
+        comparison_results,
+        {
+            "BASELINE_CENTS": "BASELINE",
+            "ALTERNATIVO_CENTS": "ALTERNATIVO",
+            "DELTA_CENTS": "DELTA",
+        },
+        SIMPLES_2027_COMPARISON_WORKBOOK_COLUMNS,
+    )
+
+
 def _replace_money_columns(
     frame: pd.DataFrame,
     replacements: Mapping[str, str],
@@ -805,6 +955,9 @@ def _write_summary_sheet(
     fiscal_operations: pd.DataFrame,
     fiscal_assessment: pd.DataFrame,
     comparison: pd.DataFrame,
+    simples_results: pd.DataFrame,
+    simples_comparison: pd.DataFrame,
+    simples_report: Simples2027CounterfactualReport | None,
 ) -> None:
     ws = wb.create_sheet("RESUMO")
     _set_presentation_title(ws, "RESUMO", "Visão executiva do caso contábil e tributário.")
@@ -857,26 +1010,69 @@ def _write_summary_sheet(
     _write_key_value_rows(ws, 13, 4, accounting_rows, money=True)
 
     _write_section_header(ws, 23, 1, "RESULTADO TRIBUTÁRIO - BASELINE", span=2)
-    baseline_assessment = _assessment_row(fiscal_assessment, baseline_id)
-    baseline_operations = _scenario_rows(fiscal_operations, baseline_id)
-    tribute = _display_unknown(baseline_assessment.get("TRIBUTO"))
-    tax_rows = [
-        ("Tributo", tribute),
-        ("Débitos", _sum_optional_money(baseline_operations, "DEBITO")),
-        ("Créditos", _sum_optional_money(baseline_operations, "CREDITO")),
-        ("CBS apurada", baseline_assessment.get("S_APUR")),
-        ("CBS a recolher", baseline_assessment.get("T_RECOLHER")),
-        ("Saldo credor", baseline_assessment.get("C_SALDO")),
-        ("Impacto em caixa", _display_unknown(baseline_assessment.get("P_CASH"))),
-        ("Impacto em DRE", _display_unknown(baseline_assessment.get("E_DRE"))),
-    ]
+    if simples_report is not None and not simples_results.empty:
+        baseline_simples = _scenario_rows(simples_results, simples_report.baseline_scenario_id).iloc[0].to_dict()
+        tax_rows = [
+            ("Regime", "Simples puro"),
+            ("Encargo comparável", baseline_simples.get("ENCARGO_TRIBUTARIO_COMPARAVEL")),
+            ("DAS total", baseline_simples.get("DAS_TOTAL")),
+            ("CBS dentro do DAS", baseline_simples.get("DAS_CBS")),
+            ("IBS dentro do DAS", baseline_simples.get("DAS_IBS")),
+            ("Taxa CBS usada no híbrido", f"{simples_report.cbs_rate_used_fraction:.4%}"),
+            ("Fonte da taxa CBS", "hipótese analítica" if simples_report.cbs_rate_source == "analysis" else "FISCAL_PARAM"),
+        ]
+    else:
+        baseline_assessment = _assessment_row(fiscal_assessment, baseline_id)
+        baseline_operations = _scenario_rows(fiscal_operations, baseline_id)
+        tribute = _display_unknown(baseline_assessment.get("TRIBUTO"))
+        tax_rows = [
+            ("Tributo", tribute),
+            ("Débitos", _sum_optional_money(baseline_operations, "DEBITO")),
+            ("Créditos", _sum_optional_money(baseline_operations, "CREDITO")),
+            ("CBS apurada", baseline_assessment.get("S_APUR")),
+            ("CBS a recolher", baseline_assessment.get("T_RECOLHER")),
+            ("Saldo credor", baseline_assessment.get("C_SALDO")),
+            ("Impacto em caixa", _display_unknown(baseline_assessment.get("P_CASH"))),
+            ("Impacto em DRE", _display_unknown(baseline_assessment.get("E_DRE"))),
+        ]
     _write_key_value_rows(ws, 24, 1, tax_rows, money=True)
 
-    _write_section_header(ws, 23, 4, "NOTA SOBRE O CENÁRIO-CONTROLE", span=2)
-    note = (
-        "O cenário CBS_2026_CONTROLE é um controle estrutural usado para validar a comparação multi-cenário. "
-        "Ele não representa uma legislação ou regime tributário alternativo."
-    )
+    if simples_report is not None and not simples_results.empty:
+        baseline_simples = _scenario_rows(simples_results, simples_report.baseline_scenario_id)
+        alternative_simples = _scenario_rows(simples_results, simples_report.alternative_scenario_id)
+        baseline_row = baseline_simples.iloc[0].to_dict() if not baseline_simples.empty else {}
+        alternative_row = alternative_simples.iloc[0].to_dict() if not alternative_simples.empty else {}
+        entity_attrs = _entity_profile_map(tax_context.entity_profile)
+        _write_section_header(ws, 34, 1, "SIMPLES 2027 - DEMO", span=5)
+        simples_rows = [
+            ("RBT12", baseline_row.get("RBT12")),
+            ("Anexo", entity_attrs.get("ANEXO_SIMPLES", "não configurado")),
+            ("Baseline", "Simples puro"),
+            ("Alternativo", "Simples híbrido"),
+            ("Encargo comparável - puro", baseline_row.get("ENCARGO_TRIBUTARIO_COMPARAVEL")),
+            ("Encargo comparável - híbrido", alternative_row.get("ENCARGO_TRIBUTARIO_COMPARAVEL")),
+            ("Delta de encargo", _metric_value(simples_comparison, "ENCARGO_TRIBUTARIO_COMPARAVEL", "DELTA")),
+        ]
+        _write_key_value_rows(ws, 35, 1, simples_rows, money=True)
+        ws.cell(row=35, column=4, value=f"CBS 2027 - taxa usada nesta simulação: {simples_report.cbs_rate_used_fraction}")
+        ws.cell(row=36, column=4, value=f"STATUS: {'HIPÓTESE ANALÍTICA' if simples_report.cbs_rate_source == 'analysis' else 'NORMATIVA'}")
+        ws.cell(row=37, column=4, value="A alíquota normativa de 2027 ainda não está cadastrada em FISCAL_PARAM." if simples_report.cbs_rate_source == "analysis" else "Alíquota CBS normativa lida de FISCAL_PARAM.")
+        break_even = simples_report.cbs_break_even_rate_fraction
+        ws.cell(row=38, column=4, value=f"Alíquota de equilíbrio da CBS: aproximadamente {break_even:.4%}" if break_even is not None else "Alíquota de equilíbrio da CBS: não calculada")
+        for row in range(35, 39):
+            ws.cell(row=row, column=4).alignment = Alignment(wrap_text=True)
+
+    _write_section_header(ws, 23, 4, "NOTA SOBRE O CENÁRIO", span=2)
+    if simples_report is not None:
+        note = (
+            "O cenário alternativo Simples híbrido depende de hipóteses analíticas declaradas em ANALISE_PARAM. "
+            "A análise não define automaticamente o melhor regime."
+        )
+    else:
+        note = (
+            "O cenário CBS_2026_CONTROLE é um controle estrutural usado para validar a comparação multi-cenário. "
+            "Ele não representa uma legislação ou regime tributário alternativo."
+        )
     ws.cell(row=24, column=4, value=note)
     ws.merge_cells(start_row=24, start_column=4, end_row=27, end_column=6)
     ws["D24"].alignment = Alignment(wrap_text=True, vertical="top")
@@ -913,6 +1109,12 @@ def _write_inputs_guide_sheet(wb: Workbook) -> None:
                 (9, "FISCAL_PARAM", "parâmetros normativos versionados", "somente com base normativa rastreável", "muito alto"),
             ],
         ),
+        (
+            "HIPÓTESES ANALÍTICAS - NÃO NORMATIVAS",
+            [
+                (10, "ANALISE_PARAM", "hipóteses de sensibilidade", "alterar premissas analíticas não normativas", "alto"),
+            ],
+        ),
     ]
 
     row_number = 4
@@ -945,9 +1147,17 @@ def _write_comparison_sheet(
     tax_scenarios: pd.DataFrame,
     fiscal_assessment: pd.DataFrame,
     comparison: pd.DataFrame,
+    simples_results: pd.DataFrame,
+    simples_comparison: pd.DataFrame,
+    simples_report: Simples2027CounterfactualReport | None,
 ) -> None:
     ws = wb.create_sheet("COMPARACAO")
     _set_presentation_title(ws, "COMPARAÇÃO", "Leitura descritiva do baseline contra o cenário alternativo.")
+
+    if simples_report is not None and not simples_results.empty:
+        _write_simples_comparison_presentation(ws, simples_results, simples_comparison, simples_report)
+        _finalize_presentation_sheet(ws, widths={"A": 38, "B": 22, "C": 22, "D": 18, "E": 24})
+        return
 
     comparison_row = comparison.iloc[0].to_dict() if not comparison.empty else {}
     baseline_id = str(comparison_row.get("ID_CENARIO_BASE") or _baseline_scenario_id(tax_scenarios) or "não configurado")
@@ -1004,6 +1214,123 @@ def _write_comparison_sheet(
     _finalize_presentation_sheet(ws, widths={"A": 26, "B": 20, "C": 22, "D": 20, "E": 24})
 
 
+def _write_simples_comparison_presentation(
+    ws,
+    simples_results: pd.DataFrame,
+    simples_comparison: pd.DataFrame,
+    simples_report: Simples2027CounterfactualReport,
+) -> None:
+    baseline_id = simples_report.baseline_scenario_id
+    alternative_id = simples_report.alternative_scenario_id
+    _write_key_value_rows(
+        ws,
+        4,
+        1,
+        [
+            ("Baseline", f"{baseline_id} - Simples puro"),
+            ("Alternativo", f"{alternative_id} - Simples híbrido"),
+            ("Fonte da taxa CBS", "hipótese analítica" if simples_report.cbs_rate_source == "analysis" else "FISCAL_PARAM"),
+        ],
+    )
+    for row_number, (label, sheet_name) in enumerate(
+        [
+            ("Resultados Simples 2027", "SIMPLES_2027_RESULTADOS"),
+            ("Comparação Simples 2027", "SIMPLES_2027_COMPARACAO"),
+            ("Hipóteses analíticas", "ANALISE_PARAM"),
+            ("Cenários tributários", "CENARIOS_TRIBUTARIOS"),
+        ],
+        start=4,
+    ):
+        _add_internal_link(ws.cell(row=row_number, column=4), sheet_name, label)
+
+    rate_label = f"CBS 2027 - taxa usada nesta simulação: {simples_report.cbs_rate_used_fraction:.4%}"
+    ws.cell(row=8, column=1, value=rate_label)
+    ws.merge_cells(start_row=8, start_column=1, end_row=8, end_column=4)
+    ws["A8"].font = Font(bold=True, color="1F2933")
+    ws["A8"].fill = PatternFill("solid", fgColor="FFF2CC")
+    ws.cell(row=9, column=1, value="STATUS: HIPÓTESE ANALÍTICA" if simples_report.cbs_rate_source == "analysis" else "STATUS: NORMATIVA")
+    ws.cell(row=10, column=1, value="A alíquota normativa de 2027 ainda não está cadastrada em FISCAL_PARAM." if simples_report.cbs_rate_source == "analysis" else "A alíquota CBS foi lida de FISCAL_PARAM.")
+    break_even = simples_report.cbs_break_even_rate_fraction
+    ws.cell(row=11, column=1, value=f"Alíquota de equilíbrio da CBS: aproximadamente {break_even:.4%} - DERIVADO ANALÍTICO" if break_even is not None else "Alíquota de equilíbrio da CBS: não calculada")
+
+    baseline = _scenario_rows(simples_results, baseline_id).iloc[0].to_dict()
+    alternative = _scenario_rows(simples_results, alternative_id).iloc[0].to_dict()
+    _write_section_header(ws, 14, 1, "CARGA PRÓPRIA", span=4)
+    _write_indicator_table(
+        ws,
+        15,
+        ("INDICADOR", "SIMPLES PURO", "SIMPLES HÍBRIDO", "DELTA"),
+        [
+            ("DAS total", baseline.get("DAS_TOTAL"), None, None),
+            ("CBS dentro do DAS", baseline.get("DAS_CBS"), None, None),
+            ("IBS dentro do DAS", baseline.get("DAS_IBS"), None, None),
+            ("DAS residual", baseline.get("DAS_OUTROS"), alternative.get("DAS_OUTROS"), Decimal("0")),
+            ("CBS regular líquida modelada", None, alternative.get("CBS_VALOR_LIQUIDO_MODELADO"), None),
+            ("IBS regular líquido modelado", None, alternative.get("IBS_VALOR_LIQUIDO_MODELADO"), None),
+            (
+                "Encargo tributário comparável",
+                baseline.get("ENCARGO_TRIBUTARIO_COMPARAVEL"),
+                alternative.get("ENCARGO_TRIBUTARIO_COMPARAVEL"),
+                _metric_value(simples_comparison, "ENCARGO_TRIBUTARIO_COMPARAVEL", "DELTA"),
+            ),
+        ],
+    )
+    _write_section_header(ws, 25, 1, "CADEIA DE CRÉDITOS", span=4)
+    _write_indicator_table(
+        ws,
+        26,
+        ("INDICADOR", "PURO", "HÍBRIDO", "DELTA"),
+        [
+            (
+                "Crédito potencial CBS da empresa",
+                baseline.get("CBS_CREDITO_EMPRESA_POTENCIAL"),
+                alternative.get("CBS_CREDITO_EMPRESA_POTENCIAL"),
+                _metric_value(simples_comparison, "CREDITO_EMPRESA_CBS_POTENCIAL", "DELTA"),
+            ),
+            (
+                "Crédito potencial IBS da empresa",
+                baseline.get("IBS_CREDITO_EMPRESA_POTENCIAL"),
+                alternative.get("IBS_CREDITO_EMPRESA_POTENCIAL"),
+                _metric_value(simples_comparison, "CREDITO_EMPRESA_IBS_POTENCIAL", "DELTA"),
+            ),
+            (
+                "Crédito potencial CBS ao cliente B2B",
+                baseline.get("CLIENTE_B2B_CREDITO_CBS_POTENCIAL"),
+                alternative.get("CLIENTE_B2B_CREDITO_CBS_POTENCIAL"),
+                _metric_value(simples_comparison, "CLIENTE_B2B_CREDITO_CBS_POTENCIAL", "DELTA"),
+            ),
+            (
+                "Crédito potencial IBS ao cliente B2B",
+                baseline.get("CLIENTE_B2B_CREDITO_IBS_POTENCIAL"),
+                alternative.get("CLIENTE_B2B_CREDITO_IBS_POTENCIAL"),
+                _metric_value(simples_comparison, "CLIENTE_B2B_CREDITO_IBS_POTENCIAL", "DELTA"),
+            ),
+        ],
+    )
+    _write_section_header(ws, 33, 1, "NOTA METODOLÓGICA", span=4)
+    ws.cell(row=34, column=1, value="O encargo tributário comparável do cenário híbrido depende de hipóteses analíticas sobre a taxa da CBS e a realização de créditos. Ele não representa pagamento financeiro efetivamente ocorrido nem substitui a apuração oficial.")
+    ws.merge_cells(start_row=34, start_column=1, end_row=35, end_column=4)
+    ws.cell(row=36, column=1, value="A análise não define automaticamente o melhor regime.")
+    ws.merge_cells(start_row=36, start_column=1, end_row=36, end_column=4)
+    ws.freeze_panes = "A15"
+
+
+def _write_indicator_table(
+    ws,
+    start_row: int,
+    headers: tuple[str, str, str, str],
+    rows: list[tuple[str, object, object, object]],
+) -> None:
+    for column_index, header in enumerate(headers, start=1):
+        ws.cell(row=start_row, column=column_index, value=header)
+    _style_small_header(ws, start_row, 1, 4)
+    for row_offset, values in enumerate(rows, start=start_row + 1):
+        for column_index, value in enumerate(values, start=1):
+            cell = ws.cell(row=row_offset, column=column_index, value=_display_na(value))
+            if column_index > 1 and _is_known_money(value):
+                cell.number_format = '"R$" #,##0.00'
+
+
 def _write_readme(wb: Workbook) -> None:
     ws = wb.create_sheet("README")
     rows = [
@@ -1011,10 +1338,12 @@ def _write_readme(wb: Workbook) -> None:
         ("Versão", WORKBOOK_SPEC_VERSION),
         ("Como começar", "Comece por RESUMO. Use ENTRADAS para localizar o que pode ser editado. Use COMPARACAO para analisar resultados entre cenários."),
         ("Regra operacional", "Editar somente abas de entrada; regenerar pelo Python. As demais abas fornecem detalhamento e auditoria."),
-        ("Entradas", "CONFIG, ENTIDADE, PLANO_CONTAS, MAPEAMENTO_CONTAS, EVENTOS, EVENTOS_FISCAIS, MAPEAMENTO_DF, CENARIOS_TRIBUTARIOS e FISCAL_PARAM."),
+        ("Entradas", "CONFIG, ENTIDADE, PLANO_CONTAS, MAPEAMENTO_CONTAS, EVENTOS, EVENTOS_FISCAIS, MAPEAMENTO_DF, CENARIOS_TRIBUTARIOS, FISCAL_PARAM e ANALISE_PARAM."),
         ("COD_DF", "PLANO_CONTAS.COD_DF é espelho denormalizado de MAPEAMENTO_DF e é sobrescrito na regeneração."),
-        ("Tributário", "Spec 08 materializa a interface tributária; Spec 09 calcula CBS 2026; Spec 10 executa múltiplos cenários; Spec 11 compara e materializa saídas fiscais derivadas."),
-        ("Derivadas", "LANCAMENTOS, PARTIDAS, VINCULO_EVENTO_LCTO, DIARIO, RAZAO, BALANCETE, BP, DRE, FISCAL_RESULTADOS_OPERACAO, FISCAL_APURACAO, COMPARATIVO_CENARIOS, VALIDACOES e PROVENIENCIA."),
+        ("Tributário", "Spec 08 materializa a interface tributária; Spec 09 calcula CBS 2026; Spec 10 executa múltiplos cenários; Spec 11 compara e materializa saídas fiscais derivadas; Spec 12 compara Simples 2027 puro e híbrido."),
+        ("FISCAL_PARAM", "Fonte normativa parametrizada com proveniência."),
+        ("ANALISE_PARAM", "Hipóteses declaradas para análise de sensibilidade; uma hipótese nunca é apresentada como legislação."),
+        ("Derivadas", "LANCAMENTOS, PARTIDAS, VINCULO_EVENTO_LCTO, DIARIO, RAZAO, BALANCETE, BP, DRE, FISCAL_RESULTADOS_OPERACAO, FISCAL_APURACAO, COMPARATIVO_CENARIOS, SIMPLES_2027_RESULTADOS, SIMPLES_2027_COMPARACAO, VALIDACOES e PROVENIENCIA."),
         ("Fonte de verdade", "Objetos derivados são reconstruídos a partir das abas de entrada."),
     ]
     for row_number, values in enumerate(rows, start=1):
@@ -1066,6 +1395,28 @@ def _format_columns(ws, columns: list[str]) -> None:
         "DELTA_P_CASH",
         "DELTA_E_DRE",
         "DELTA_C_SALDO",
+        "RECEITA_MES",
+        "RBT12",
+        "DAS_TOTAL",
+        "DAS_CBS",
+        "DAS_IBS",
+        "DAS_OUTROS",
+        "CBS_DEBITO_REGULAR",
+        "CBS_CREDITO_EMPRESA_POTENCIAL",
+        "CBS_CREDITO_EMPRESA_MODELADO",
+        "CBS_VALOR_LIQUIDO_MODELADO",
+        "CBS_SALDO_CREDOR_MODELADO",
+        "IBS_DEBITO_REGULAR",
+        "IBS_CREDITO_EMPRESA_POTENCIAL",
+        "IBS_CREDITO_EMPRESA_MODELADO",
+        "IBS_VALOR_LIQUIDO_MODELADO",
+        "IBS_SALDO_CREDOR_MODELADO",
+        "ENCARGO_TRIBUTARIO_COMPARAVEL",
+        "CLIENTE_B2B_CREDITO_CBS_POTENCIAL",
+        "CLIENTE_B2B_CREDITO_IBS_POTENCIAL",
+        "BASELINE",
+        "ALTERNATIVO",
+        "DELTA",
         "VL_EVENTO",
         "VL_CUSTO",
         "VL_LCTO",
@@ -1098,7 +1449,7 @@ def _format_columns(ws, columns: list[str]) -> None:
         number_format = None
         if column_name in money_columns:
             number_format = '#,##0.00'
-        elif column_name == "ALIQUOTA":
+        elif column_name in {"ALIQUOTA", "ALIQUOTA_EFETIVA_SIMPLES", "CBS_REGULAR_RATE_FRACTION", "IBS_REGULAR_RATE_FRACTION"}:
             number_format = "0.0000%"
         elif column_name in date_columns:
             number_format = "yyyy-mm-dd"
@@ -1201,9 +1552,9 @@ def _apply_tab_colors(wb: Workbook) -> None:
     }
     groups = {
         colors["interface"]: {"RESUMO", "ENTRADAS", "COMPARACAO", "README"},
-        colors["inputs"]: {"CONFIG", "ENTIDADE", "PLANO_CONTAS", "MAPEAMENTO_CONTAS", "EVENTOS", "EVENTOS_FISCAIS", "MAPEAMENTO_DF", "CENARIOS_TRIBUTARIOS", "FISCAL_PARAM"},
+        colors["inputs"]: {"CONFIG", "ENTIDADE", "PLANO_CONTAS", "MAPEAMENTO_CONTAS", "EVENTOS", "EVENTOS_FISCAIS", "MAPEAMENTO_DF", "CENARIOS_TRIBUTARIOS", "FISCAL_PARAM", "ANALISE_PARAM"},
         colors["accounting"]: {"LANCAMENTOS", "PARTIDAS", "VINCULO_EVENTO_LCTO", "DIARIO", "RAZAO", "BALANCETE", "BP", "DRE"},
-        colors["tax"]: {"FISCAL_RESULTADOS_OPERACAO", "FISCAL_APURACAO", "COMPARATIVO_CENARIOS"},
+        colors["tax"]: {"FISCAL_RESULTADOS_OPERACAO", "FISCAL_APURACAO", "COMPARATIVO_CENARIOS", "SIMPLES_2027_RESULTADOS", "SIMPLES_2027_COMPARACAO"},
         colors["audit"]: {"VALIDACOES", "PROVENIENCIA"},
     }
     for color, sheet_names in groups.items():
@@ -1291,6 +1642,16 @@ def _display_unknown(value: object) -> object:
     return value
 
 
+def _display_na(value: object) -> object:
+    if value is None:
+        return "n/a"
+    if pd.isna(value):
+        return "n/a"
+    if isinstance(value, str) and value.strip() == "":
+        return "n/a"
+    return value
+
+
 def _is_known_money(value: object) -> bool:
     if value is None:
         return False
@@ -1303,6 +1664,32 @@ def _is_known_money(value: object) -> bool:
     except (InvalidOperation, ValueError):
         return False
     return True
+
+
+def _entity_profile_map(entity_profile: pd.DataFrame) -> dict[str, str]:
+    if entity_profile.empty or not {"ATRIBUTO", "VALOR"}.issubset(entity_profile.columns):
+        return {}
+    return {
+        str(row["ATRIBUTO"]).strip(): str(row["VALOR"]).strip()
+        for _, row in entity_profile.iterrows()
+        if str(row["ATRIBUTO"]).strip()
+    }
+
+
+def _metric_value(frame: pd.DataFrame, metric: str, column: str) -> object | None:
+    if frame.empty or not {"METRICA", column}.issubset(frame.columns):
+        return None
+    rows = frame.loc[frame["METRICA"] == metric, column]
+    if rows.empty:
+        return None
+    return rows.iloc[0]
+
+
+def _analysis_id(tax_analysis_parameters: pd.DataFrame) -> str | None:
+    if tax_analysis_parameters.empty or "ID_ANALISE" not in tax_analysis_parameters.columns:
+        return None
+    values = [str(value).strip() for value in tax_analysis_parameters["ID_ANALISE"].dropna().unique() if str(value).strip()]
+    return values[0] if values else None
 
 
 def _apply_editable_validations(wb: Workbook) -> None:
@@ -1329,6 +1716,7 @@ def _apply_editable_validations(wb: Workbook) -> None:
     _add_list_validation(wb["CENARIOS_TRIBUTARIOS"], "K", '"TRUE,FALSE"', 2, 1000)
     _add_list_validation(wb["FISCAL_PARAM"], "G", '"str,int,decimal,bool,date"', 2, 1000)
     _add_list_validation(wb["FISCAL_PARAM"], "H", '"norm,reg,tec,oper"', 2, 1000)
+    _add_list_validation(wb["ANALISE_PARAM"], "D", '"str,int,decimal,bool,date"', 2, 1000)
 
 
 def _add_list_validation(ws, column: str, formula: str, first_row: int, last_row: int) -> None:
@@ -1423,6 +1811,23 @@ def _active_tax_scenario_count(tax_context: TaxContext) -> int:
     if "ATIVO" not in scenarios.columns:
         return 0
     return sum(1 for value in scenarios["ATIVO"] if _is_true(value))
+
+
+def _detect_supported_tax_experiment(tax_context: TaxContext) -> str | None:
+    scenarios = tax_context.tax_scenarios
+    if not {"ATIVO", "REGIME_CONSUMO", "DT_REFERENCIA_NORMATIVA"}.issubset(scenarios.columns):
+        return None
+    active = scenarios.loc[scenarios["ATIVO"].map(_is_true)].copy()
+    regimes = {str(value).strip() for value in active["REGIME_CONSUMO"]}
+    reference_dates = {_coerce_optional_excel_date(value) for value in active["DT_REFERENCIA_NORMATIVA"]}
+    if regimes == {"cbs_regime_regular"} and reference_dates == {date(2026, 8, 31)}:
+        return "cbs_2026"
+    if regimes == {"simples_ibs_cbs_das", "ibs_cbs_regime_regular"} and all(
+        value is not None and date(2027, 1, 1) <= value <= date(2027, 6, 30)
+        for value in reference_dates
+    ):
+        return "simples_2027"
+    return None
 
 
 def _is_true(value: object) -> bool:
