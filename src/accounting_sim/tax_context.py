@@ -219,7 +219,8 @@ def validate_tax_scenarios(
     if not entity_report.ok:
         issues.extend(entity_report.issues)
 
-    entity_ids = _normalize_entity_profile(entity_profile)["ID_ENTIDADE"].dropna().unique().tolist() if not entity_profile.empty else []
+    has_entity_schema = set(ENTITY_PROFILE_COLUMNS).issubset(entity_profile.columns)
+    entity_ids = _normalize_entity_profile(entity_profile)["ID_ENTIDADE"].dropna().unique().tolist() if has_entity_schema and not entity_profile.empty else []
     if len(entity_ids) != 1:
         issues.append(ValidationIssue("tax_scenario_requires_single_entity", "CENARIOS_TRIBUTARIOS requer exatamente uma entidade em ENTIDADE."))
     expected_entity_id = entity_ids[0] if len(entity_ids) == 1 else None
@@ -245,8 +246,8 @@ def validate_tax_scenarios(
             issues.append(ValidationIssue("invalid_tax_scenario_active_flag", "ATIVO deve ser bool.", scenario_id=scenario_id))
         if row["ATIVO"] is True and row["REGIME_ENTIDADE"] == "":
             issues.append(ValidationIssue("active_tax_scenario_missing_regime", "Cenário ativo requer REGIME_ENTIDADE.", scenario_id=scenario_id))
-        if row["ATIVO"] is True and row["ID_VERSAO_NORMATIVA"] == "":
-            issues.append(ValidationIssue("active_tax_scenario_missing_normative_version", "Cenário ativo requer ID_VERSAO_NORMATIVA.", scenario_id=scenario_id))
+        if row["ID_VERSAO_NORMATIVA"] == "":
+            issues.append(ValidationIssue("tax_scenario_missing_normative_version", "Todo cenário requer ID_VERSAO_NORMATIVA.", scenario_id=scenario_id))
 
     ids = scenarios["ID_CENARIO"]
     for _, row in scenarios[ids.duplicated(keep=False)].iterrows():
@@ -256,18 +257,21 @@ def validate_tax_scenarios(
     if not active.empty and int(active["E_BASELINE"].sum()) != 1:
         issues.append(ValidationIssue("invalid_active_baseline_count", "Deve existir exatamente um baseline entre cenários ativos."))
 
-    version_ids = _normalize_tax_parameters(tax_parameters)["ID_VERSAO_NORMATIVA"].dropna()
-    version_set = {value for value in version_ids if value != ""}
-    for _, row in scenarios.iterrows():
-        version = row["ID_VERSAO_NORMATIVA"]
-        if version != "" and version not in version_set:
-            issues.append(
-                ValidationIssue(
-                    "tax_scenario_missing_normative_version",
-                    "ID_VERSAO_NORMATIVA deve existir em FISCAL_PARAM quando há cenários.",
-                    scenario_id=row["ID_CENARIO"],
+    tax_parameter_schema_issues = _missing_columns(tax_parameters, TAX_PARAMETER_COLUMNS, "missing_tax_parameter_column")
+    issues.extend(tax_parameter_schema_issues)
+    if not tax_parameter_schema_issues:
+        version_ids = _normalize_tax_parameters(tax_parameters)["ID_VERSAO_NORMATIVA"].dropna()
+        version_set = {value for value in version_ids if value != ""}
+        for _, row in scenarios.iterrows():
+            version = row["ID_VERSAO_NORMATIVA"]
+            if version != "" and version not in version_set:
+                issues.append(
+                    ValidationIssue(
+                        "tax_scenario_unknown_normative_version",
+                        "ID_VERSAO_NORMATIVA deve existir em FISCAL_PARAM quando há cenários.",
+                        scenario_id=row["ID_CENARIO"],
+                    )
                 )
-            )
 
     return ValidationReport(ok=not issues, issues=tuple(_deduplicate_issues(issues)))
 

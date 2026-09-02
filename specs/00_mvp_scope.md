@@ -241,7 +241,7 @@ scenario_name
 spec_version
 ```
 
-Nesta spec, basta reservar esses nomes; a geração estocástica vem apenas na spec 08.
+Nesta spec, basta reservar esses nomes; a geração estocástica foi deslocada para fase posterior pelo adendo da Spec 08.
 
 ## Caso de demonstração alvo
 

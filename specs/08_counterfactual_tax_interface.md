@@ -1524,7 +1524,7 @@ Se `CENARIOS_TRIBUTARIOS` não estiver vazio:
 1. `ENTIDADE` deve conter exatamente uma entidade;
 2. todos os cenários devem referenciá-la;
 3. deve existir exatamente um cenário baseline ativo;
-4. cada cenário ativo deve referenciar `ID_VERSAO_NORMATIVA`;
+4. cada cenário deve referenciar `ID_VERSAO_NORMATIVA`;
 5. a versão normativa referenciada deve existir em `FISCAL_PARAM`;
 6. todos os parâmetros devem possuir proveniência estrutural completa.
 
@@ -1907,7 +1907,7 @@ Cobrir pelo menos:
 12. `ID_CENARIO` é único;
 13. cenário sem entidade válida é rejeitado;
 14. cenário ativo sem `REGIME_ENTIDADE` é rejeitado;
-15. cenário ativo sem versão normativa é rejeitado;
+15. cenário sem versão normativa é rejeitado, ainda que inativo;
 16. zero baselines entre cenários ativos é rejeitado;
 17. mais de um baseline ativo é rejeitado;
 18. um baseline ativo é aceito;

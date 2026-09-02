@@ -233,13 +233,27 @@ def test_tax_scenario_without_valid_entity_is_rejected():
     assert "tax_scenario_invalid_entity" in issue_codes(validate_tax_scenarios(scenarios, entity_profile(), tax_parameters()))
 
 
+def test_tax_scenario_with_incomplete_entity_profile_schema_returns_issues_without_keyerror():
+    incomplete_entity_profile = entity_profile().drop(columns=["ID_ENTIDADE"])
+    report = validate_tax_scenarios(tax_scenarios(), incomplete_entity_profile, tax_parameters())
+    assert report.ok is False
+    assert "missing_entity_profile_column" in issue_codes(report)
+
+
 def test_active_tax_scenario_requires_regime_and_normative_version():
     no_regime = tax_scenarios()
     no_regime.loc[0, "REGIME_ENTIDADE"] = ""
     no_version = tax_scenarios()
     no_version.loc[0, "ID_VERSAO_NORMATIVA"] = ""
     assert "active_tax_scenario_missing_regime" in issue_codes(validate_tax_scenarios(no_regime, entity_profile(), tax_parameters()))
-    assert "active_tax_scenario_missing_normative_version" in issue_codes(validate_tax_scenarios(no_version, entity_profile(), tax_parameters()))
+    assert "tax_scenario_missing_normative_version" in issue_codes(validate_tax_scenarios(no_version, entity_profile(), tax_parameters()))
+
+
+def test_inactive_tax_scenario_also_requires_normative_version():
+    scenarios = tax_scenarios()
+    scenarios.loc[1, "ATIVO"] = False
+    scenarios.loc[1, "ID_VERSAO_NORMATIVA"] = ""
+    assert "tax_scenario_missing_normative_version" in issue_codes(validate_tax_scenarios(scenarios, entity_profile(), tax_parameters()))
 
 
 def test_zero_and_multiple_active_baselines_are_rejected():
@@ -258,7 +272,14 @@ def test_one_active_baseline_is_accepted():
 def test_missing_normative_version_is_rejected_when_scenarios_exist():
     params = tax_parameters()
     params.loc[0, "ID_VERSAO_NORMATIVA"] = "OUTRA_VERSAO"
-    assert "tax_scenario_missing_normative_version" in issue_codes(validate_tax_scenarios(tax_scenarios(), entity_profile(), params))
+    assert "tax_scenario_unknown_normative_version" in issue_codes(validate_tax_scenarios(tax_scenarios(), entity_profile(), params))
+
+
+def test_tax_scenario_with_incomplete_tax_parameter_schema_returns_issues_without_keyerror():
+    incomplete_tax_parameters = tax_parameters().drop(columns=["ID_VERSAO_NORMATIVA"])
+    report = validate_tax_scenarios(tax_scenarios(), entity_profile(), incomplete_tax_parameters)
+    assert report.ok is False
+    assert "missing_tax_parameter_column" in issue_codes(report)
 
 
 def test_tax_parameter_id_must_be_unique():
