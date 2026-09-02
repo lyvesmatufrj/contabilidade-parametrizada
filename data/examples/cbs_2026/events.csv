@@ -1,0 +1,4 @@
+ID_EVENTO,DT_EVENTO,CLASSE_EVENTO,TIPO_EVENTO,DIRECAO,NATUREZA,VL_EVENTO_CENTS,VL_CUSTO_CENTS,MEIO_FINANCEIRO,CATEGORIA_DESPESA,COD_PART,COND_PAGTO,DOC_REF,HIST,ORIGEM,SPEC_VERSION
+E001,2026-08-03,TR,compra_mercadoria_a_vista,in,bem,101000,,caixa,,FORN001,vista,NFe-001,Compra para revenda,sintética,spec_03_events_v1
+E002,2026-08-10,TR,venda_a_prazo,out,bem,200000,100000,clientes,,CLI001,prazo,NFe-002,Venda tributada integralmente,sintética,spec_03_events_v1
+E003,2026-08-12,TR,aporte_capital,in,financeiro,500000,,caixa,,,na,CAP-001,Integralizacao de capital,sintética,spec_03_events_v1
