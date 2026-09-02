@@ -299,6 +299,40 @@ def sheet_frame(path, sheet_name: str) -> pd.DataFrame:
     return pd.DataFrame(rows[1:], columns=rows[0], dtype=object)
 
 
+def sheet_text(ws) -> str:
+    values = []
+    for row in ws.iter_rows(values_only=True):
+        for value in row:
+            if value is not None:
+                values.append(str(value))
+    return "\n".join(values)
+
+
+def cell_right_of(ws, label: str):
+    for row in ws.iter_rows():
+        for cell in row:
+            if cell.value == label:
+                return ws.cell(row=cell.row, column=cell.column + 1).value
+    raise AssertionError(f"Label não encontrado: {label}")
+
+
+def comparison_indicator_values(ws, indicator: str) -> tuple[object, object, object]:
+    for row in ws.iter_rows():
+        if row[0].value == indicator:
+            return row[1].value, row[2].value, row[3].value
+    raise AssertionError(f"Indicador não encontrado: {indicator}")
+
+
+def hyperlink_targets(ws) -> set[str]:
+    return {cell.hyperlink.target for row in ws.iter_rows() for cell in row if cell.hyperlink is not None}
+
+
+def presentation_values(path, sheet_name: str) -> list[list[object]]:
+    wb = load_workbook(path, data_only=True)
+    ws = wb[sheet_name]
+    return [[cell.value for cell in row] for row in ws.iter_rows()]
+
+
 def decimal_value(value: object) -> Decimal:
     return Decimal(str(value)).quantize(Decimal("0.00"))
 
@@ -325,6 +359,9 @@ def test_build_workbook_creates_xlsx_and_can_be_reopened(tmp_path):
 def test_workbook_sheets_are_exactly_in_canonical_order(tmp_path):
     _, wb = build_case(tmp_path)
     assert WORKBOOK_SHEETS == (
+        "RESUMO",
+        "ENTRADAS",
+        "COMPARACAO",
         "README",
         "CONFIG",
         "ENTIDADE",
@@ -363,6 +400,9 @@ def test_tax_output_sheets_are_derived_not_editable(tmp_path):
     }
     assert forbidden.isdisjoint(set(wb.sheetnames))
     assert {
+        "RESUMO",
+        "ENTRADAS",
+        "COMPARACAO",
         "FISCAL_RESULTADOS_OPERACAO",
         "FISCAL_APURACAO",
         "COMPARATIVO_CENARIOS",
@@ -372,6 +412,168 @@ def test_tax_output_sheets_are_derived_not_editable(tmp_path):
         "FISCAL_APURACAO",
         "COMPARATIVO_CENARIOS",
     }.isdisjoint(EDITABLE_SHEETS)
+
+
+def test_presentation_sheets_are_first_and_not_editable(tmp_path):
+    _, wb = build_case(tmp_path)
+
+    assert wb.sheetnames[:3] == ["RESUMO", "ENTRADAS", "COMPARACAO"]
+    assert {"RESUMO", "ENTRADAS", "COMPARACAO"}.isdisjoint(EDITABLE_SHEETS)
+
+
+def test_summary_sheet_explains_canonical_case_without_technical_ids(tmp_path):
+    path, wb = build_case(tmp_path, cbs_workbook_inputs(cbs_tax_context(control=True)))
+    ws = wb["RESUMO"]
+    text = sheet_text(ws)
+
+    assert "2026-08-01 a 2026-08-31" in text
+    assert "OPERAÇÕES DO PERÍODO" in text
+    assert "Compra de mercadoria à vista" in text
+    assert "Venda a prazo" in text
+    assert "Aporte de capital" in text
+    assert decimal_value(cell_right_of(ws, "Compra de mercadoria à vista")) == Decimal("1010.00")
+    assert decimal_value(cell_right_of(ws, "Venda a prazo")) == Decimal("2000.00")
+    assert decimal_value(cell_right_of(ws, "Aporte de capital")) == Decimal("5000.00")
+
+    assert "RESULTADO CONTÁBIL" in text
+    assert decimal_value(cell_right_of(ws, "Receita")) == Decimal("2000.00")
+    assert decimal_value(cell_right_of(ws, "CMV")) == Decimal("-1000.00")
+    assert decimal_value(cell_right_of(ws, "Resultado do período")) == Decimal("1000.00")
+    assert decimal_value(cell_right_of(ws, "Ativo final")) == Decimal("6000.00")
+    assert decimal_value(cell_right_of(ws, "Passivo")) == Decimal("0.00")
+    assert decimal_value(cell_right_of(ws, "Patrimônio líquido")) == Decimal("6000.00")
+
+    assert "RESULTADO TRIBUTÁRIO - BASELINE" in text
+    assert cell_right_of(ws, "Tributo") == "CBS"
+    assert decimal_value(cell_right_of(ws, "Débitos")) == Decimal("18.00")
+    assert decimal_value(cell_right_of(ws, "Créditos")) == Decimal("9.00")
+    assert decimal_value(cell_right_of(ws, "CBS apurada")) == Decimal("9.00")
+    assert decimal_value(cell_right_of(ws, "CBS a recolher")) == Decimal("0.00")
+    assert cell_right_of(ws, "Impacto em caixa") == "não calculado"
+    assert cell_right_of(ws, "Impacto em DRE") == "não calculado"
+    assert "CBS_2026_CONTROLE é um controle estrutural" in text
+
+    assert sheet_frame(path, "FISCAL_APURACAO").loc[0, "P_CASH"] is None
+
+
+def test_inputs_sheet_guides_editable_sheets_by_care_level(tmp_path):
+    _, wb = build_case(tmp_path)
+    ws = wb["ENTRADAS"]
+    text = sheet_text(ws)
+
+    assert "ENTRADAS DE USO COMUM" in text
+    assert "CONFIGURAÇÕES ESTRUTURAIS" in text
+    assert "PARÂMETROS NORMATIVOS - ALTA SENSIBILIDADE" in text
+    for sheet_name in EDITABLE_SHEETS:
+        assert sheet_name in text
+        assert f"#'{sheet_name}'!A1" in hyperlink_targets(ws)
+    assert "muito alto" in text
+
+
+def test_comparison_sheet_presents_counterfactual_values_without_ranking(tmp_path):
+    path, wb = build_case(tmp_path, cbs_workbook_inputs(cbs_tax_context(control=True)))
+    ws = wb["COMPARACAO"]
+    text = sheet_text(ws)
+    assessment = sheet_frame(path, "FISCAL_APURACAO")
+    comparison = sheet_frame(path, "COMPARATIVO_CENARIOS").iloc[0]
+    baseline = assessment.loc[assessment["ID_CENARIO"] == "CBS_2026_BASE"].iloc[0]
+    alternative = assessment.loc[assessment["ID_CENARIO"] == "CBS_2026_CONTROLE"].iloc[0]
+
+    assert cell_right_of(ws, "Cenário baseline") == "CBS_2026_BASE"
+    assert cell_right_of(ws, "Cenário alternativo") == "CBS_2026_CONTROLE"
+    assert cell_right_of(ws, "Tributo") == "CBS"
+    for indicator in ("Saldo apurado", "Valor a recolher", "Saldo credor", "Impacto em caixa", "Impacto em DRE"):
+        assert indicator in text
+
+    base_value, alternative_value, delta = comparison_indicator_values(ws, "Saldo apurado")
+    assert decimal_value(base_value) == decimal_value(baseline["S_APUR"])
+    assert decimal_value(alternative_value) == decimal_value(alternative["S_APUR"])
+    assert decimal_value(delta) == decimal_value(comparison["DELTA_S_APUR"])
+
+    base_value, alternative_value, delta = comparison_indicator_values(ws, "Valor a recolher")
+    assert decimal_value(base_value) == decimal_value(baseline["T_RECOLHER"])
+    assert decimal_value(alternative_value) == decimal_value(alternative["T_RECOLHER"])
+    assert decimal_value(delta) == decimal_value(comparison["DELTA_T_RECOLHER"])
+
+    assert comparison_indicator_values(ws, "Impacto em caixa") == ("não calculado", "não calculado", "não calculado")
+    assert comparison_indicator_values(ws, "Impacto em DRE") == ("não calculado", "não calculado", "não calculado")
+    assert "melhor cenário" not in text.lower()
+    assert "ranking" not in text.lower()
+    assert "score" not in text.lower()
+    assert "controle estrutural" in text
+
+
+def test_presentation_internal_hyperlinks_target_existing_sheets(tmp_path):
+    _, wb = build_case(tmp_path, cbs_workbook_inputs(cbs_tax_context(control=True)))
+    expected = {
+        "RESUMO": {"#'ENTRADAS'!A1", "#'COMPARACAO'!A1", "#'BP'!A1", "#'DRE'!A1", "#'FISCAL_APURACAO'!A1"},
+        "COMPARACAO": {"#'FISCAL_APURACAO'!A1", "#'COMPARATIVO_CENARIOS'!A1", "#'CENARIOS_TRIBUTARIOS'!A1"},
+    }
+    for sheet_name, targets in expected.items():
+        assert targets.issubset(hyperlink_targets(wb[sheet_name]))
+    for target in hyperlink_targets(wb["ENTRADAS"]):
+        assert target.startswith("#'")
+        assert target.endswith("'!A1")
+        assert target.removeprefix("#'").removesuffix("'!A1") in wb.sheetnames
+
+
+def test_regenerate_rebuilds_presentation_sheets_and_discards_manual_edits(tmp_path):
+    path, _ = build_case(tmp_path, cbs_workbook_inputs(cbs_tax_context(control=True)))
+    wb = load_workbook(path)
+    wb["RESUMO"]["A1"] = "ADULTERADO"
+    wb["ENTRADAS"]["A1"] = "ADULTERADO"
+    wb["COMPARACAO"]["A1"] = "ADULTERADO"
+    wb.save(path)
+
+    regenerated = tmp_path / "regenerated_presentation.xlsx"
+    regenerate_workbook(path, regenerated)
+    rebuilt = load_workbook(regenerated, data_only=True)
+
+    assert rebuilt["RESUMO"]["A1"].value == "RESUMO"
+    assert rebuilt["ENTRADAS"]["A1"].value == "ENTRADAS"
+    assert rebuilt["COMPARACAO"]["A1"].value == "COMPARAÇÃO"
+    assert decimal_value(cell_right_of(rebuilt["COMPARACAO"], "Saldo apurado")) == Decimal("9.00")
+
+
+def test_all_previous_technical_sheets_remain_available_after_presentation_layer(tmp_path):
+    _, wb = build_case(tmp_path)
+    previous_technical_sheets = {
+        "README",
+        "CONFIG",
+        "ENTIDADE",
+        "PLANO_CONTAS",
+        "MAPEAMENTO_CONTAS",
+        "EVENTOS",
+        "EVENTOS_FISCAIS",
+        "LANCAMENTOS",
+        "PARTIDAS",
+        "VINCULO_EVENTO_LCTO",
+        "DIARIO",
+        "RAZAO",
+        "BALANCETE",
+        "MAPEAMENTO_DF",
+        "BP",
+        "DRE",
+        "CENARIOS_TRIBUTARIOS",
+        "FISCAL_PARAM",
+        "FISCAL_RESULTADOS_OPERACAO",
+        "FISCAL_APURACAO",
+        "COMPARATIVO_CENARIOS",
+        "VALIDACOES",
+        "PROVENIENCIA",
+    }
+    assert previous_technical_sheets.issubset(set(wb.sheetnames))
+
+
+def test_presentation_sheets_are_deterministic(tmp_path):
+    first = tmp_path / "first_presentation.xlsx"
+    second = tmp_path / "second_presentation.xlsx"
+    inputs = cbs_workbook_inputs(cbs_tax_context(control=True))
+    build_workbook(inputs, first)
+    build_workbook(inputs, second)
+
+    for sheet_name in ("RESUMO", "ENTRADAS", "COMPARACAO"):
+        assert presentation_values(first, sheet_name) == presentation_values(second, sheet_name)
 
 
 def test_named_tables_exist_and_cover_expected_row_counts(tmp_path):
@@ -916,9 +1118,7 @@ def test_same_input_generates_same_values_after_two_materializations(tmp_path):
     inputs = workbook_inputs()
     build_workbook(inputs, first)
     build_workbook(inputs, second)
-    for sheet_name in WORKBOOK_SHEETS:
-        if sheet_name == "README":
-            continue
+    for sheet_name in TABLE_NAMES:
         assert_frame_equal(sheet_frame(first, sheet_name), sheet_frame(second, sheet_name), check_dtype=False)
 
 

@@ -10,7 +10,7 @@ from typing import Mapping
 
 import pandas as pd
 from openpyxl import Workbook, load_workbook
-from openpyxl.styles import Font, PatternFill
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.cell import range_boundaries
 from openpyxl.worksheet.datavalidation import DataValidation
@@ -88,6 +88,9 @@ from accounting_sim.tax_comparison import (
 WORKBOOK_SPEC_VERSION = "spec_11_excel_workbook_v1"
 
 WORKBOOK_SHEETS: tuple[str, ...] = (
+    "RESUMO",
+    "ENTRADAS",
+    "COMPARACAO",
     "README",
     "CONFIG",
     "ENTIDADE",
@@ -393,8 +396,27 @@ def build_workbook(
     )
     provenance = _build_provenance(simulation_config, events, rule_version, tax_context)
 
+    balance_sheet_workbook = _balance_sheet_to_workbook(financial_statements.balance_sheet)
+    income_statement_workbook = _income_statement_to_workbook(financial_statements.income_statement)
+    tax_operation_results_workbook = _tax_operations_to_workbook(tax_operation_results)
+    tax_assessment_results_workbook = _tax_assessment_to_workbook(tax_assessment_results)
+    counterfactual_comparison_workbook = _tax_comparison_to_workbook(counterfactual_comparison)
+
     wb = Workbook()
     wb.remove(wb.active)
+    _write_summary_sheet(
+        wb,
+        simulation_config,
+        tax_context,
+        events,
+        balance_sheet_workbook,
+        income_statement_workbook,
+        tax_operation_results_workbook,
+        tax_assessment_results_workbook,
+        counterfactual_comparison_workbook,
+    )
+    _write_inputs_guide_sheet(wb)
+    _write_comparison_sheet(wb, tax_context.tax_scenarios, tax_assessment_results_workbook, counterfactual_comparison_workbook)
     _write_readme(wb)
     _write_table(wb, "CONFIG", _config_to_frame(simulation_config))
     _write_table(wb, "ENTIDADE", _serialize_frame(tax_context.entity_profile, ENTITY_PROFILE_COLUMNS))
@@ -409,16 +431,17 @@ def build_workbook(
     _write_table(wb, "RAZAO", _ledger_to_workbook(ledger))
     _write_table(wb, "BALANCETE", _trial_balance_to_workbook(trial_balance))
     _write_table(wb, "MAPEAMENTO_DF", _serialize_frame(statement_mapping, STATEMENT_MAPPING_COLUMNS))
-    _write_table(wb, "BP", _balance_sheet_to_workbook(financial_statements.balance_sheet))
-    _write_table(wb, "DRE", _income_statement_to_workbook(financial_statements.income_statement))
+    _write_table(wb, "BP", balance_sheet_workbook)
+    _write_table(wb, "DRE", income_statement_workbook)
     _write_table(wb, "CENARIOS_TRIBUTARIOS", _serialize_frame(tax_context.tax_scenarios, TAX_SCENARIO_COLUMNS))
     _write_table(wb, "FISCAL_PARAM", _serialize_frame(tax_context.tax_parameters, TAX_PARAMETER_COLUMNS))
-    _write_table(wb, "FISCAL_RESULTADOS_OPERACAO", _tax_operations_to_workbook(tax_operation_results))
-    _write_table(wb, "FISCAL_APURACAO", _tax_assessment_to_workbook(tax_assessment_results))
-    _write_table(wb, "COMPARATIVO_CENARIOS", _tax_comparison_to_workbook(counterfactual_comparison))
+    _write_table(wb, "FISCAL_RESULTADOS_OPERACAO", tax_operation_results_workbook)
+    _write_table(wb, "FISCAL_APURACAO", tax_assessment_results_workbook)
+    _write_table(wb, "COMPARATIVO_CENARIOS", counterfactual_comparison_workbook)
     _write_table(wb, "VALIDACOES", validations)
     _write_table(wb, "PROVENIENCIA", provenance)
     _apply_editable_validations(wb)
+    _apply_tab_colors(wb)
 
     if tuple(wb.sheetnames) != WORKBOOK_SHEETS:
         raise AccountingInvariantError("Workbook gerado com abas fora da ordem canônica.")
@@ -772,12 +795,222 @@ def _serialize_frame(frame: pd.DataFrame, columns: tuple[str, ...]) -> pd.DataFr
     return serialized.loc[:, list(columns)]
 
 
+def _write_summary_sheet(
+    wb: Workbook,
+    config: SimulationConfig,
+    tax_context: TaxContext,
+    events: pd.DataFrame,
+    balance_sheet: pd.DataFrame,
+    income_statement: pd.DataFrame,
+    fiscal_operations: pd.DataFrame,
+    fiscal_assessment: pd.DataFrame,
+    comparison: pd.DataFrame,
+) -> None:
+    ws = wb.create_sheet("RESUMO")
+    _set_presentation_title(ws, "RESUMO", "Visão executiva do caso contábil e tributário.")
+
+    baseline_id = _baseline_scenario_id(tax_context.tax_scenarios)
+    active_count = _active_tax_scenario_count(tax_context)
+    entity_name = _entity_display_name(tax_context.entity_profile)
+
+    _write_section_header(ws, 4, 1, "IDENTIFICAÇÃO", span=2)
+    identification_rows = [
+        ("Empresa", entity_name),
+        ("Período", f"{config.start_date.isoformat()} a {config.end_date.isoformat()}"),
+        ("Moeda", config.currency),
+        ("Cenário baseline", baseline_id or "não configurado"),
+        ("Número de cenários ativos", active_count),
+    ]
+    _write_key_value_rows(ws, 5, 1, identification_rows)
+
+    _write_section_header(ws, 4, 4, "NAVEGAÇÃO", span=2)
+    for row_number, (label, sheet_name) in enumerate(
+        [
+            ("Entradas editáveis", "ENTRADAS"),
+            ("Comparação de cenários", "COMPARACAO"),
+            ("Balanço patrimonial", "BP"),
+            ("Demonstração do resultado", "DRE"),
+            ("Apuração fiscal", "FISCAL_APURACAO"),
+        ],
+        start=5,
+    ):
+        _add_internal_link(ws.cell(row=row_number, column=4), sheet_name, label)
+
+    _write_section_header(ws, 12, 1, "OPERAÇÕES DO PERÍODO", span=2)
+    ws.cell(row=13, column=1, value="Operação")
+    ws.cell(row=13, column=2, value="Valor")
+    _style_small_header(ws, 13, 1, 2)
+    for row_offset, (_, event) in enumerate(events.iterrows(), start=14):
+        ws.cell(row=row_offset, column=1, value=_event_display_label(event))
+        value_cell = ws.cell(row=row_offset, column=2, value=_cents_to_excel_money(int(event["VL_EVENTO_CENTS"])))
+        value_cell.number_format = '"R$" #,##0.00'
+
+    _write_section_header(ws, 12, 4, "RESULTADO CONTÁBIL", span=2)
+    accounting_rows = [
+        ("Receita", _line_value(income_statement, "DRE_RECEITA_VENDAS")),
+        ("CMV", _line_value(income_statement, "DRE_CMV")),
+        ("Resultado do período", _line_value(income_statement, "DRE_RESULTADO_PERIODO")),
+        ("Ativo final", _line_value(balance_sheet, "BP_ATIVO")),
+        ("Passivo", _line_value(balance_sheet, "BP_PASSIVO")),
+        ("Patrimônio líquido", _line_value(balance_sheet, "BP_PATRIMONIO_LIQUIDO")),
+    ]
+    _write_key_value_rows(ws, 13, 4, accounting_rows, money=True)
+
+    _write_section_header(ws, 23, 1, "RESULTADO TRIBUTÁRIO - BASELINE", span=2)
+    baseline_assessment = _assessment_row(fiscal_assessment, baseline_id)
+    baseline_operations = _scenario_rows(fiscal_operations, baseline_id)
+    tribute = _display_unknown(baseline_assessment.get("TRIBUTO"))
+    tax_rows = [
+        ("Tributo", tribute),
+        ("Débitos", _sum_optional_money(baseline_operations, "DEBITO")),
+        ("Créditos", _sum_optional_money(baseline_operations, "CREDITO")),
+        ("CBS apurada", baseline_assessment.get("S_APUR")),
+        ("CBS a recolher", baseline_assessment.get("T_RECOLHER")),
+        ("Saldo credor", baseline_assessment.get("C_SALDO")),
+        ("Impacto em caixa", _display_unknown(baseline_assessment.get("P_CASH"))),
+        ("Impacto em DRE", _display_unknown(baseline_assessment.get("E_DRE"))),
+    ]
+    _write_key_value_rows(ws, 24, 1, tax_rows, money=True)
+
+    _write_section_header(ws, 23, 4, "NOTA SOBRE O CENÁRIO-CONTROLE", span=2)
+    note = (
+        "O cenário CBS_2026_CONTROLE é um controle estrutural usado para validar a comparação multi-cenário. "
+        "Ele não representa uma legislação ou regime tributário alternativo."
+    )
+    ws.cell(row=24, column=4, value=note)
+    ws.merge_cells(start_row=24, start_column=4, end_row=27, end_column=6)
+    ws["D24"].alignment = Alignment(wrap_text=True, vertical="top")
+
+    _finalize_presentation_sheet(ws, widths={"A": 30, "B": 20, "C": 4, "D": 34, "E": 24, "F": 24})
+
+
+def _write_inputs_guide_sheet(wb: Workbook) -> None:
+    ws = wb.create_sheet("ENTRADAS")
+    _set_presentation_title(ws, "ENTRADAS", "Mapa das abas que podem ser alteradas antes da regeneração pelo Python.")
+
+    sections = [
+        (
+            "ENTRADAS DE USO COMUM",
+            [
+                (1, "CONFIG", "período e configuração geral", "alterar período/simulação", "baixo"),
+                (2, "ENTIDADE", "atributos da empresa", "alterar características factuais da entidade", "médio"),
+                (3, "EVENTOS", "operações econômicas", "alterar fatos econômicos", "alto"),
+                (4, "EVENTOS_FISCAIS", "atributos fiscais dos eventos", "alterar dados documentais/fiscais", "alto"),
+            ],
+        ),
+        (
+            "CONFIGURAÇÕES ESTRUTURAIS",
+            [
+                (5, "PLANO_CONTAS", "plano de contas auditável", "ajustar estrutura contábil", "alto"),
+                (6, "MAPEAMENTO_CONTAS", "papéis contábeis para contas", "recodificar contas sem mudar regras econômicas", "alto"),
+                (7, "MAPEAMENTO_DF", "contas para linhas de BP/DRE", "alterar apresentação das demonstrações", "alto"),
+            ],
+        ),
+        (
+            "PARÂMETROS NORMATIVOS - ALTA SENSIBILIDADE",
+            [
+                (8, "CENARIOS_TRIBUTARIOS", "cenários e regimes tributários", "configurar cenários contrafactuais", "alto"),
+                (9, "FISCAL_PARAM", "parâmetros normativos versionados", "somente com base normativa rastreável", "muito alto"),
+            ],
+        ),
+    ]
+
+    row_number = 4
+    headers = ("ORDEM", "ABA", "O_QUE_CONTEM", "QUANDO_EDITAR", "NIVEL_DE_CUIDADO")
+    for section_title, rows in sections:
+        _write_section_header(ws, row_number, 1, section_title, span=5)
+        row_number += 1
+        for column_index, header in enumerate(headers, start=1):
+            ws.cell(row=row_number, column=column_index, value=header)
+        _style_small_header(ws, row_number, 1, len(headers))
+        row_number += 1
+        for order, sheet_name, contains, when_edit, care_level in rows:
+            ws.cell(row=row_number, column=1, value=order)
+            _add_internal_link(ws.cell(row=row_number, column=2), sheet_name, sheet_name)
+            ws.cell(row=row_number, column=3, value=contains)
+            ws.cell(row=row_number, column=4, value=when_edit)
+            ws.cell(row=row_number, column=5, value=care_level)
+            row_number += 1
+        row_number += 2
+
+    ws.freeze_panes = "A5"
+    _finalize_presentation_sheet(
+        ws,
+        widths={"A": 10, "B": 26, "C": 38, "D": 46, "E": 22},
+    )
+
+
+def _write_comparison_sheet(
+    wb: Workbook,
+    tax_scenarios: pd.DataFrame,
+    fiscal_assessment: pd.DataFrame,
+    comparison: pd.DataFrame,
+) -> None:
+    ws = wb.create_sheet("COMPARACAO")
+    _set_presentation_title(ws, "COMPARAÇÃO", "Leitura descritiva do baseline contra o cenário alternativo.")
+
+    comparison_row = comparison.iloc[0].to_dict() if not comparison.empty else {}
+    baseline_id = str(comparison_row.get("ID_CENARIO_BASE") or _baseline_scenario_id(tax_scenarios) or "não configurado")
+    alternative_id = str(comparison_row.get("ID_CENARIO") or "não configurado")
+    tribute = str(comparison_row.get("TRIBUTO") or "não calculado")
+
+    header_rows = [
+        ("Cenário baseline", baseline_id),
+        ("Cenário alternativo", alternative_id),
+        ("Tributo", tribute),
+    ]
+    _write_key_value_rows(ws, 4, 1, header_rows)
+
+    for row_number, (label, sheet_name) in enumerate(
+        [
+            ("Apuração técnica", "FISCAL_APURACAO"),
+            ("Comparativo técnico", "COMPARATIVO_CENARIOS"),
+            ("Cenários tributários", "CENARIOS_TRIBUTARIOS"),
+        ],
+        start=4,
+    ):
+        _add_internal_link(ws.cell(row=row_number, column=4), sheet_name, label)
+
+    baseline_assessment = _assessment_row(fiscal_assessment, baseline_id, tribute)
+    alternative_assessment = _assessment_row(fiscal_assessment, alternative_id, tribute)
+    rows = [
+        ("Saldo apurado", baseline_assessment.get("S_APUR"), alternative_assessment.get("S_APUR"), comparison_row.get("DELTA_S_APUR")),
+        ("Valor a recolher", baseline_assessment.get("T_RECOLHER"), alternative_assessment.get("T_RECOLHER"), comparison_row.get("DELTA_T_RECOLHER")),
+        ("Saldo credor", baseline_assessment.get("C_SALDO"), alternative_assessment.get("C_SALDO"), comparison_row.get("DELTA_C_SALDO")),
+        ("Impacto em caixa", _display_unknown(baseline_assessment.get("P_CASH")), _display_unknown(alternative_assessment.get("P_CASH")), _display_unknown(comparison_row.get("DELTA_P_CASH"))),
+        ("Impacto em DRE", _display_unknown(baseline_assessment.get("E_DRE")), _display_unknown(alternative_assessment.get("E_DRE")), _display_unknown(comparison_row.get("DELTA_E_DRE"))),
+    ]
+
+    table_start = 9
+    for column_index, header in enumerate(("INDICADOR", "BASELINE", "ALTERNATIVO", "DELTA"), start=1):
+        ws.cell(row=table_start, column=column_index, value=header)
+    _style_small_header(ws, table_start, 1, 4)
+    for row_offset, values in enumerate(rows, start=table_start + 1):
+        for column_index, value in enumerate(values, start=1):
+            cell = ws.cell(row=row_offset, column=column_index, value=_display_unknown(value))
+            if column_index > 1 and _is_known_money(value):
+                cell.number_format = '"R$" #,##0.00'
+
+    _write_section_header(ws, 17, 1, "NOTA", span=4)
+    note = (
+        "Os deltas atuais são nulos porque o cenário alternativo é apenas um controle estrutural. "
+        "Uma comparação econômica substantiva exige um segundo tratamento tributário juridicamente especificado."
+    )
+    ws.cell(row=18, column=1, value=note)
+    ws.merge_cells(start_row=18, start_column=1, end_row=20, end_column=4)
+    ws["A18"].alignment = Alignment(wrap_text=True, vertical="top")
+
+    ws.freeze_panes = "A9"
+    _finalize_presentation_sheet(ws, widths={"A": 26, "B": 20, "C": 22, "D": 20, "E": 24})
+
+
 def _write_readme(wb: Workbook) -> None:
     ws = wb.create_sheet("README")
     rows = [
         ("Workbook contábil parametrizado", None),
         ("Versão", WORKBOOK_SPEC_VERSION),
-        ("Regra operacional", "Editar somente abas de entrada; regenerar pelo Python."),
+        ("Como começar", "Comece por RESUMO. Use ENTRADAS para localizar o que pode ser editado. Use COMPARACAO para analisar resultados entre cenários."),
+        ("Regra operacional", "Editar somente abas de entrada; regenerar pelo Python. As demais abas fornecem detalhamento e auditoria."),
         ("Entradas", "CONFIG, ENTIDADE, PLANO_CONTAS, MAPEAMENTO_CONTAS, EVENTOS, EVENTOS_FISCAIS, MAPEAMENTO_DF, CENARIOS_TRIBUTARIOS e FISCAL_PARAM."),
         ("COD_DF", "PLANO_CONTAS.COD_DF é espelho denormalizado de MAPEAMENTO_DF e é sobrescrito na regeneração."),
         ("Tributário", "Spec 08 materializa a interface tributária; Spec 09 calcula CBS 2026; Spec 10 executa múltiplos cenários; Spec 11 compara e materializa saídas fiscais derivadas."),
@@ -884,6 +1117,192 @@ def _set_column_widths(ws, columns: list[str]) -> None:
         if column_name in {"COD_CTA", "COD_CTA_SUP", "PAPEL_CONTABIL", "COD_LINHA"}:
             width = 22
         ws.column_dimensions[get_column_letter(index)].width = width
+
+
+def _set_presentation_title(ws, title: str, subtitle: str) -> None:
+    ws.cell(row=1, column=1, value=title)
+    ws.cell(row=2, column=1, value=subtitle)
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=6)
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=6)
+    ws["A1"].font = Font(bold=True, size=16, color="1F2933")
+    ws["A2"].font = Font(size=10, color="52606D")
+    ws["A2"].alignment = Alignment(wrap_text=True)
+
+
+def _write_section_header(ws, row: int, column: int, label: str, *, span: int) -> None:
+    ws.cell(row=row, column=column, value=label)
+    ws.merge_cells(start_row=row, start_column=column, end_row=row, end_column=column + span - 1)
+    cell = ws.cell(row=row, column=column)
+    cell.font = Font(bold=True, color="1F2933")
+    cell.fill = PatternFill("solid", fgColor="E7E6E6")
+    cell.alignment = Alignment(vertical="center")
+
+
+def _style_small_header(ws, row: int, first_column: int, last_column: int) -> None:
+    for column in range(first_column, last_column + 1):
+        cell = ws.cell(row=row, column=column)
+        cell.font = Font(bold=True, color="1F2933")
+        cell.fill = PatternFill("solid", fgColor="F2F4F7")
+        cell.alignment = Alignment(vertical="center")
+
+
+def _write_key_value_rows(
+    ws,
+    start_row: int,
+    start_column: int,
+    rows: list[tuple[str, object]],
+    *,
+    money: bool = False,
+) -> None:
+    for offset, (label, value) in enumerate(rows):
+        row = start_row + offset
+        ws.cell(row=row, column=start_column, value=label)
+        ws.cell(row=row, column=start_column).font = Font(bold=True, color="323F4B")
+        value_cell = ws.cell(row=row, column=start_column + 1, value=_display_unknown(value))
+        if money and _is_known_money(value):
+            value_cell.number_format = '"R$" #,##0.00'
+
+
+def _finalize_presentation_sheet(ws, *, widths: Mapping[str, int]) -> None:
+    for column, width in widths.items():
+        ws.column_dimensions[column].width = width
+    ws.page_setup.orientation = "landscape"
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.page_margins.left = 0.3
+    ws.page_margins.right = 0.3
+    ws.page_margins.top = 0.5
+    ws.page_margins.bottom = 0.5
+    for row in ws.iter_rows():
+        for cell in row:
+            cell.alignment = Alignment(
+                horizontal=cell.alignment.horizontal,
+                vertical=cell.alignment.vertical or "top",
+                wrap_text=True,
+            )
+            cell.border = Border(bottom=Side(style="hair", color="D9E2EC"))
+    ws.sheet_view.showGridLines = False
+
+
+def _add_internal_link(cell, sheet_name: str, label: str) -> None:
+    cell.value = label
+    cell.hyperlink = f"#'{sheet_name}'!A1"
+    cell.style = "Hyperlink"
+
+
+def _apply_tab_colors(wb: Workbook) -> None:
+    colors = {
+        "interface": "5B9BD5",
+        "inputs": "70AD47",
+        "accounting": "A5A5A5",
+        "tax": "FFC000",
+        "audit": "8064A2",
+    }
+    groups = {
+        colors["interface"]: {"RESUMO", "ENTRADAS", "COMPARACAO", "README"},
+        colors["inputs"]: {"CONFIG", "ENTIDADE", "PLANO_CONTAS", "MAPEAMENTO_CONTAS", "EVENTOS", "EVENTOS_FISCAIS", "MAPEAMENTO_DF", "CENARIOS_TRIBUTARIOS", "FISCAL_PARAM"},
+        colors["accounting"]: {"LANCAMENTOS", "PARTIDAS", "VINCULO_EVENTO_LCTO", "DIARIO", "RAZAO", "BALANCETE", "BP", "DRE"},
+        colors["tax"]: {"FISCAL_RESULTADOS_OPERACAO", "FISCAL_APURACAO", "COMPARATIVO_CENARIOS"},
+        colors["audit"]: {"VALIDACOES", "PROVENIENCIA"},
+    }
+    for color, sheet_names in groups.items():
+        for sheet_name in sheet_names:
+            if sheet_name in wb.sheetnames:
+                wb[sheet_name].sheet_properties.tabColor = color
+
+
+def _entity_display_name(entity_profile: pd.DataFrame) -> str:
+    if entity_profile.empty or not set(ENTITY_PROFILE_COLUMNS).issubset(entity_profile.columns):
+        return "não configurado"
+    for attribute in ("NOME_EMPRESA", "RAZAO_SOCIAL", "NOME", "NOME_FANTASIA"):
+        rows = entity_profile.loc[entity_profile["ATRIBUTO"].astype(str).str.strip() == attribute, "VALOR"]
+        if not rows.empty and str(rows.iloc[0]).strip():
+            return str(rows.iloc[0]).strip()
+    entity_ids = [str(value).strip() for value in entity_profile["ID_ENTIDADE"].dropna().unique() if str(value).strip()]
+    return entity_ids[0] if entity_ids else "não configurado"
+
+
+def _baseline_scenario_id(tax_scenarios: pd.DataFrame) -> str | None:
+    if tax_scenarios.empty or not {"ID_CENARIO", "E_BASELINE", "ATIVO"}.issubset(tax_scenarios.columns):
+        return None
+    active_baseline = tax_scenarios.loc[
+        tax_scenarios["E_BASELINE"].map(_is_true) & tax_scenarios["ATIVO"].map(_is_true),
+        "ID_CENARIO",
+    ]
+    if active_baseline.empty:
+        return None
+    return str(active_baseline.iloc[0]).strip()
+
+
+def _event_display_label(event: pd.Series) -> str:
+    labels = {
+        EventType.CAPITAL_CONTRIBUTION.value: "Aporte de capital",
+        EventType.PURCHASE_CASH.value: "Compra de mercadoria à vista",
+        EventType.SALE_CREDIT.value: "Venda a prazo",
+        EventType.CUSTOMER_RECEIPT.value: "Recebimento de cliente",
+    }
+    event_type = str(event["TIPO_EVENTO"]).strip()
+    return labels.get(event_type, event_type.replace("_", " ").capitalize())
+
+
+def _line_value(frame: pd.DataFrame, code: str) -> object | None:
+    if frame.empty or "COD_LINHA" not in frame.columns or "VL" not in frame.columns:
+        return None
+    rows = frame.loc[frame["COD_LINHA"] == code, "VL"]
+    if rows.empty:
+        return None
+    return rows.iloc[0]
+
+
+def _assessment_row(fiscal_assessment: pd.DataFrame, scenario_id: str | None, tribute: str | None = None) -> dict[str, object]:
+    if fiscal_assessment.empty or scenario_id is None or "ID_CENARIO" not in fiscal_assessment.columns:
+        return {}
+    rows = fiscal_assessment.loc[fiscal_assessment["ID_CENARIO"] == scenario_id]
+    if tribute and tribute != "não calculado" and "TRIBUTO" in rows.columns:
+        rows = rows.loc[rows["TRIBUTO"] == tribute]
+    if rows.empty:
+        return {}
+    return rows.iloc[0].to_dict()
+
+
+def _scenario_rows(frame: pd.DataFrame, scenario_id: str | None) -> pd.DataFrame:
+    if frame.empty or scenario_id is None or "ID_CENARIO" not in frame.columns:
+        return pd.DataFrame(columns=frame.columns, dtype=object)
+    return frame.loc[frame["ID_CENARIO"] == scenario_id]
+
+
+def _sum_optional_money(frame: pd.DataFrame, column: str) -> Decimal | None:
+    if frame.empty or column not in frame.columns:
+        return None
+    values = [Decimal(str(value)) for value in frame[column] if _is_known_money(value)]
+    if not values:
+        return None
+    return sum(values, Decimal("0"))
+
+
+def _display_unknown(value: object) -> object:
+    if value is None:
+        return "não calculado"
+    if pd.isna(value):
+        return "não calculado"
+    if isinstance(value, str) and value.strip() == "":
+        return "não calculado"
+    return value
+
+
+def _is_known_money(value: object) -> bool:
+    if value is None:
+        return False
+    if pd.isna(value):
+        return False
+    if isinstance(value, str) and value.strip() in {"", "não calculado"}:
+        return False
+    try:
+        Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return False
+    return True
 
 
 def _apply_editable_validations(wb: Workbook) -> None:
