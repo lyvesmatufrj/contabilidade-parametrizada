@@ -79,7 +79,7 @@ Não fazem parte desse MVP:
 | 07 | `07_financial_statements.md` | Como contas viram BP/DRE? | mapeamento das contas e demonstrações mínimas |
 | 08 | `08_counterfactual_tax_interface.md` | Como representar fatos fiscais, entidade, regime, versão normativa e proveniência? | interface tributária contrafactual |
 | 09 | futura spec | Como selecionar regras efetivas e calcular um primeiro recorte tributário? | motor tributário mínimo |
-| 10 | futura spec | Como executar vários pares `(rho, Theta)` sobre a mesma base? | experimento contrafactual |
+| 10 | `10_counterfactual_tax_experiment.md` | Como executar vários pares `(rho, Theta)` sobre a mesma base? | experimento contrafactual |
 | 11 | futura spec | Como comparar resultados e produzir uma decisão auditável? | comparação/relatório de cenários |
 | posterior | futura spec | Como gerar/projetar novas bases econômicas? | geração sintética, calibração e projeção |
 

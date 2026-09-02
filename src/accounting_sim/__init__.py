@@ -72,6 +72,11 @@ from accounting_sim.tax_context import (
     validate_tax_parameters,
     validate_tax_scenarios,
 )
+from accounting_sim.tax_counterfactual import (
+    Cbs2026CounterfactualResult,
+    run_cbs_2026_counterfactual_experiment,
+    validate_cbs_2026_counterfactual_experiment,
+)
 from accounting_sim.tax_cbs_2026 import (
     CBS_2026_REQUIRED_PARAMETER_KEYS,
     CBS_2026_RULE_SPEC_VERSION,
@@ -111,6 +116,7 @@ __all__ = [
     "CHART_OF_ACCOUNTS_COLUMNS",
     "CBS_2026_REQUIRED_PARAMETER_KEYS",
     "CBS_2026_RULE_SPEC_VERSION",
+    "Cbs2026CounterfactualResult",
     "Cbs2026Result",
     "COUNTERFACTUAL_COMPARISON_COLUMNS",
     "DebitCredit",
@@ -162,8 +168,10 @@ __all__ = [
     "validate_financial_statements",
     "validate_statement_mapping",
     "run_cbs_2026",
+    "run_cbs_2026_counterfactual_experiment",
     "select_effective_cbs_2026_rules",
     "validate_cbs_2026_admissibility",
+    "validate_cbs_2026_counterfactual_experiment",
     "validate_entity_profile",
     "validate_fiscal_event_attributes",
     "validate_tax_context",
