@@ -21,6 +21,7 @@ from accounting_sim.canonical import (
     ACCOUNT_ROLE_MAPPING_COLUMNS,
     BALANCE_SHEET_COLUMNS,
     CHART_OF_ACCOUNTS_COLUMNS,
+    COUNTERFACTUAL_COMPARISON_COLUMNS,
     ENTITY_PROFILE_COLUMNS,
     EVENT_COLUMNS,
     EVENT_ENTRY_LINK_COLUMNS,
@@ -30,6 +31,8 @@ from accounting_sim.canonical import (
     JOURNAL_VIEW_COLUMNS,
     LEDGER_VIEW_COLUMNS,
     POSTING_COLUMNS,
+    TAX_ASSESSMENT_RESULT_COLUMNS,
+    TAX_OPERATION_RESULT_COLUMNS,
     TAX_PARAMETER_COLUMNS,
     TAX_SCENARIO_COLUMNS,
     STATEMENT_MAPPING_COLUMNS,
@@ -76,9 +79,13 @@ from accounting_sim.tax_context import (
     validate_tax_parameters,
     validate_tax_scenarios,
 )
+from accounting_sim.tax_comparison import (
+    CBS_2026_COUNTERFACTUAL_REPORT_SPEC_VERSION,
+    run_cbs_2026_counterfactual_report,
+)
 
 
-WORKBOOK_SPEC_VERSION = "spec_08_excel_workbook_v1"
+WORKBOOK_SPEC_VERSION = "spec_11_excel_workbook_v1"
 
 WORKBOOK_SHEETS: tuple[str, ...] = (
     "README",
@@ -99,6 +106,9 @@ WORKBOOK_SHEETS: tuple[str, ...] = (
     "DRE",
     "CENARIOS_TRIBUTARIOS",
     "FISCAL_PARAM",
+    "FISCAL_RESULTADOS_OPERACAO",
+    "FISCAL_APURACAO",
+    "COMPARATIVO_CENARIOS",
     "VALIDACOES",
     "PROVENIENCIA",
 )
@@ -231,6 +241,37 @@ INCOME_STATEMENT_WORKBOOK_COLUMNS: tuple[str, ...] = (
     "LINHA",
     "VL",
 )
+FISCAL_OPERATION_WORKBOOK_COLUMNS: tuple[str, ...] = (
+    "ID_CENARIO",
+    "ID_EVENTO",
+    "TRIBUTO",
+    "INCIDE",
+    "BASE",
+    "ALIQUOTA",
+    "CREDITO",
+    "DEBITO",
+    "VERSAO_REGRA",
+)
+FISCAL_ASSESSMENT_WORKBOOK_COLUMNS: tuple[str, ...] = (
+    "ID_CENARIO",
+    "TRIBUTO",
+    "S_APUR",
+    "T_RECOLHER",
+    "P_CASH",
+    "E_DRE",
+    "C_SALDO",
+    "VERSAO_REGRA",
+)
+COUNTERFACTUAL_COMPARISON_WORKBOOK_COLUMNS: tuple[str, ...] = (
+    "ID_CENARIO_BASE",
+    "ID_CENARIO",
+    "TRIBUTO",
+    "DELTA_S_APUR",
+    "DELTA_T_RECOLHER",
+    "DELTA_P_CASH",
+    "DELTA_E_DRE",
+    "DELTA_C_SALDO",
+)
 
 TABLE_NAMES: Mapping[str, str] = {
     "CONFIG": "tbl_CONFIG",
@@ -250,6 +291,9 @@ TABLE_NAMES: Mapping[str, str] = {
     "DRE": "tbl_DRE",
     "CENARIOS_TRIBUTARIOS": "tbl_CENARIOS_TRIBUTARIOS",
     "FISCAL_PARAM": "tbl_FISCAL_PARAM",
+    "FISCAL_RESULTADOS_OPERACAO": "tbl_FISCAL_RESULTADOS_OPERACAO",
+    "FISCAL_APURACAO": "tbl_FISCAL_APURACAO",
+    "COMPARATIVO_CENARIOS": "tbl_COMPARATIVO_CENARIOS",
     "VALIDACOES": "tbl_VALIDACOES",
     "PROVENIENCIA": "tbl_PROVENIENCIA",
 }
@@ -322,6 +366,15 @@ def build_workbook(
     statements_report = validate_financial_statements(financial_statements, trial_balance, chart_of_accounts, statement_mapping, period)
     _raise_if_invalid("DEMONSTRACOES", statements_report)
 
+    tax_operation_results = pd.DataFrame(columns=TAX_OPERATION_RESULT_COLUMNS, dtype=object)
+    tax_assessment_results = pd.DataFrame(columns=TAX_ASSESSMENT_RESULT_COLUMNS, dtype=object)
+    counterfactual_comparison = pd.DataFrame(columns=COUNTERFACTUAL_COMPARISON_COLUMNS, dtype=object)
+    if _active_tax_scenario_count(tax_context) >= 2:
+        counterfactual_report = run_cbs_2026_counterfactual_report(events, tax_context)
+        tax_operation_results = counterfactual_report.operation_results.copy(deep=True)
+        tax_assessment_results = counterfactual_report.assessment_results.copy(deep=True)
+        counterfactual_comparison = counterfactual_report.comparison_results.copy(deep=True)
+
     validations = _build_validations(
         {
             "PLANO_CONTAS": chart_report,
@@ -360,6 +413,9 @@ def build_workbook(
     _write_table(wb, "DRE", _income_statement_to_workbook(financial_statements.income_statement))
     _write_table(wb, "CENARIOS_TRIBUTARIOS", _serialize_frame(tax_context.tax_scenarios, TAX_SCENARIO_COLUMNS))
     _write_table(wb, "FISCAL_PARAM", _serialize_frame(tax_context.tax_parameters, TAX_PARAMETER_COLUMNS))
+    _write_table(wb, "FISCAL_RESULTADOS_OPERACAO", _tax_operations_to_workbook(tax_operation_results))
+    _write_table(wb, "FISCAL_APURACAO", _tax_assessment_to_workbook(tax_assessment_results))
+    _write_table(wb, "COMPARATIVO_CENARIOS", _tax_comparison_to_workbook(counterfactual_comparison))
     _write_table(wb, "VALIDACOES", validations)
     _write_table(wb, "PROVENIENCIA", provenance)
     _apply_editable_validations(wb)
@@ -571,6 +627,7 @@ def _build_provenance(config: SimulationConfig, events: pd.DataFrame, rule_versi
         ("workbook_spec_version", WORKBOOK_SPEC_VERSION),
         ("financial_statement_spec_version", FINANCIAL_STATEMENT_SPEC_VERSION),
         ("tax_interface_spec_version", TAX_INTERFACE_SPEC_VERSION),
+        ("counterfactual_report_spec_version", CBS_2026_COUNTERFACTUAL_REPORT_SPEC_VERSION),
         ("simulation_id", config.simulation_id),
         ("scenario_name", config.scenario_name),
         ("simulation_spec_version", config.spec_version),
@@ -639,6 +696,46 @@ def _income_statement_to_workbook(income_statement: pd.DataFrame) -> pd.DataFram
     return _replace_money_columns(income_statement, {"VL_CENTS": "VL"}, INCOME_STATEMENT_WORKBOOK_COLUMNS)
 
 
+def _tax_operations_to_workbook(operation_results: pd.DataFrame) -> pd.DataFrame:
+    return _replace_optional_money_columns(
+        operation_results,
+        {
+            "BASE_CENTS": "BASE",
+            "CREDITO_CENTS": "CREDITO",
+            "DEBITO_CENTS": "DEBITO",
+        },
+        FISCAL_OPERATION_WORKBOOK_COLUMNS,
+    )
+
+
+def _tax_assessment_to_workbook(assessment_results: pd.DataFrame) -> pd.DataFrame:
+    return _replace_optional_money_columns(
+        assessment_results,
+        {
+            "S_APUR_CENTS": "S_APUR",
+            "T_RECOLHER_CENTS": "T_RECOLHER",
+            "P_CASH_CENTS": "P_CASH",
+            "E_DRE_CENTS": "E_DRE",
+            "C_SALDO_CENTS": "C_SALDO",
+        },
+        FISCAL_ASSESSMENT_WORKBOOK_COLUMNS,
+    )
+
+
+def _tax_comparison_to_workbook(comparison_results: pd.DataFrame) -> pd.DataFrame:
+    return _replace_optional_money_columns(
+        comparison_results,
+        {
+            "DELTA_S_APUR_CENTS": "DELTA_S_APUR",
+            "DELTA_T_RECOLHER_CENTS": "DELTA_T_RECOLHER",
+            "DELTA_P_CASH_CENTS": "DELTA_P_CASH",
+            "DELTA_E_DRE_CENTS": "DELTA_E_DRE",
+            "DELTA_C_SALDO_CENTS": "DELTA_C_SALDO",
+        },
+        COUNTERFACTUAL_COMPARISON_WORKBOOK_COLUMNS,
+    )
+
+
 def _replace_money_columns(
     frame: pd.DataFrame,
     replacements: Mapping[str, str],
@@ -648,6 +745,22 @@ def _replace_money_columns(
     for cents_column, workbook_column in replacements.items():
         position = list(workbook_frame.columns).index(cents_column)
         workbook_frame.insert(position, workbook_column, workbook_frame.pop(cents_column).map(_cents_to_excel_money))
+    return workbook_frame.loc[:, list(output_columns)]
+
+
+def _replace_optional_money_columns(
+    frame: pd.DataFrame,
+    replacements: Mapping[str, str],
+    output_columns: tuple[str, ...],
+) -> pd.DataFrame:
+    workbook_frame = frame.copy()
+    for cents_column, workbook_column in replacements.items():
+        position = list(workbook_frame.columns).index(cents_column)
+        workbook_frame.insert(
+            position,
+            workbook_column,
+            workbook_frame.pop(cents_column).map(_optional_cents_to_excel_money),
+        )
     return workbook_frame.loc[:, list(output_columns)]
 
 
@@ -667,8 +780,8 @@ def _write_readme(wb: Workbook) -> None:
         ("Regra operacional", "Editar somente abas de entrada; regenerar pelo Python."),
         ("Entradas", "CONFIG, ENTIDADE, PLANO_CONTAS, MAPEAMENTO_CONTAS, EVENTOS, EVENTOS_FISCAIS, MAPEAMENTO_DF, CENARIOS_TRIBUTARIOS e FISCAL_PARAM."),
         ("COD_DF", "PLANO_CONTAS.COD_DF é espelho denormalizado de MAPEAMENTO_DF e é sobrescrito na regeneração."),
-        ("Tributário", "Spec 08 materializa contexto tributário contrafactual; não calcula bases, alíquotas, créditos, débitos ou apuração."),
-        ("Derivadas", "LANCAMENTOS, PARTIDAS, VINCULO_EVENTO_LCTO, DIARIO, RAZAO, BALANCETE, BP, DRE, VALIDACOES e PROVENIENCIA."),
+        ("Tributário", "Spec 08 materializa a interface tributária; Spec 09 calcula CBS 2026; Spec 10 executa múltiplos cenários; Spec 11 compara e materializa saídas fiscais derivadas."),
+        ("Derivadas", "LANCAMENTOS, PARTIDAS, VINCULO_EVENTO_LCTO, DIARIO, RAZAO, BALANCETE, BP, DRE, FISCAL_RESULTADOS_OPERACAO, FISCAL_APURACAO, COMPARATIVO_CENARIOS, VALIDACOES e PROVENIENCIA."),
         ("Fonte de verdade", "Objetos derivados são reconstruídos a partir das abas de entrada."),
     ]
     for row_number, values in enumerate(rows, start=1):
@@ -707,6 +820,19 @@ def _style_header(ws, sheet_name: str) -> None:
 
 def _format_columns(ws, columns: list[str]) -> None:
     money_columns = {
+        "BASE",
+        "CREDITO",
+        "DEBITO",
+        "S_APUR",
+        "T_RECOLHER",
+        "P_CASH",
+        "E_DRE",
+        "C_SALDO",
+        "DELTA_S_APUR",
+        "DELTA_T_RECOLHER",
+        "DELTA_P_CASH",
+        "DELTA_E_DRE",
+        "DELTA_C_SALDO",
         "VL_EVENTO",
         "VL_CUSTO",
         "VL_LCTO",
@@ -739,6 +865,8 @@ def _format_columns(ws, columns: list[str]) -> None:
         number_format = None
         if column_name in money_columns:
             number_format = '#,##0.00'
+        elif column_name == "ALIQUOTA":
+            number_format = "0.0000%"
         elif column_name in date_columns:
             number_format = "yyyy-mm-dd"
         if number_format is None:
@@ -869,6 +997,21 @@ def _copy_tax_context(tax_context: TaxContext) -> TaxContext:
         tax_scenarios=tax_context.tax_scenarios.copy(deep=True),
         tax_parameters=tax_context.tax_parameters.copy(deep=True),
     )
+
+
+def _active_tax_scenario_count(tax_context: TaxContext) -> int:
+    scenarios = tax_context.tax_scenarios
+    if "ATIVO" not in scenarios.columns:
+        return 0
+    return sum(1 for value in scenarios["ATIVO"] if _is_true(value))
+
+
+def _is_true(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "1", "sim", "s"}
+    return False
 
 
 def _cents_to_excel_money(value: int) -> Decimal:

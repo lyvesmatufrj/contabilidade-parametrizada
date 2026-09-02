@@ -77,6 +77,12 @@ from accounting_sim.tax_counterfactual import (
     run_cbs_2026_counterfactual_experiment,
     validate_cbs_2026_counterfactual_experiment,
 )
+from accounting_sim.tax_comparison import (
+    CBS_2026_COUNTERFACTUAL_REPORT_SPEC_VERSION,
+    Cbs2026CounterfactualReport,
+    compare_cbs_2026_counterfactual_result,
+    run_cbs_2026_counterfactual_report,
+)
 from accounting_sim.tax_cbs_2026 import (
     CBS_2026_REQUIRED_PARAMETER_KEYS,
     CBS_2026_RULE_SPEC_VERSION,
@@ -116,6 +122,8 @@ __all__ = [
     "CHART_OF_ACCOUNTS_COLUMNS",
     "CBS_2026_REQUIRED_PARAMETER_KEYS",
     "CBS_2026_RULE_SPEC_VERSION",
+    "CBS_2026_COUNTERFACTUAL_REPORT_SPEC_VERSION",
+    "Cbs2026CounterfactualReport",
     "Cbs2026CounterfactualResult",
     "Cbs2026Result",
     "COUNTERFACTUAL_COMPARISON_COLUMNS",
@@ -161,6 +169,7 @@ __all__ = [
     "amount_reais_to_cents",
     "assess_cbs_2026",
     "calculate_cbs_2026_operations",
+    "compare_cbs_2026_counterfactual_result",
     "load_workbook_inputs",
     "parse_iso_date",
     "regenerate_workbook",
@@ -169,6 +178,7 @@ __all__ = [
     "validate_statement_mapping",
     "run_cbs_2026",
     "run_cbs_2026_counterfactual_experiment",
+    "run_cbs_2026_counterfactual_report",
     "select_effective_cbs_2026_rules",
     "validate_cbs_2026_admissibility",
     "validate_cbs_2026_counterfactual_experiment",

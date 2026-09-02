@@ -3,8 +3,10 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 import importlib.util
+from pathlib import Path
 
 import pandas as pd
+import pytest
 from openpyxl import load_workbook
 from openpyxl.utils.cell import range_boundaries
 from pandas.testing import assert_frame_equal
@@ -40,6 +42,7 @@ from accounting_sim.statements import (
     build_default_statement_mapping,
     validate_statement_mapping,
 )
+from accounting_sim.tax_comparison import CBS_2026_COUNTERFACTUAL_REPORT_SPEC_VERSION
 from accounting_sim.tax_context import (
     TAX_INTERFACE_SPEC_VERSION,
     TaxContext,
@@ -47,7 +50,11 @@ from accounting_sim.tax_context import (
     validate_tax_context,
 )
 from accounting_sim.workbook import (
+    COUNTERFACTUAL_COMPARISON_WORKBOOK_COLUMNS,
+    EDITABLE_SHEETS,
     EVENT_WORKBOOK_COLUMNS,
+    FISCAL_ASSESSMENT_WORKBOOK_COLUMNS,
+    FISCAL_OPERATION_WORKBOOK_COLUMNS,
     TABLE_NAMES,
     WORKBOOK_SHEETS,
     WORKBOOK_SPEC_VERSION,
@@ -211,6 +218,72 @@ def configured_tax_context(version: str = "VERSAO_TESTE", scenario_id: str = "CE
     return TaxContext(entity_profile, fiscal_event_attributes, tax_scenarios, tax_parameters)
 
 
+def cbs_fixture_dir():
+    return Path(__file__).resolve().parents[1] / "data/examples/cbs_2026"
+
+
+def cbs_events() -> pd.DataFrame:
+    events = pd.read_csv(cbs_fixture_dir() / "events.csv", dtype=str, keep_default_na=False)
+    events["DT_EVENTO"] = pd.to_datetime(events["DT_EVENTO"]).dt.date
+    events["VL_EVENTO_CENTS"] = events["VL_EVENTO_CENTS"].astype(int)
+    events["VL_CUSTO_CENTS"] = events["VL_CUSTO_CENTS"].replace("", pd.NA)
+    mask = events["VL_CUSTO_CENTS"].notna()
+    events.loc[mask, "VL_CUSTO_CENTS"] = events.loc[mask, "VL_CUSTO_CENTS"].astype(int)
+    for column in ("MEIO_FINANCEIRO", "CATEGORIA_DESPESA", "COD_PART", "DOC_REF"):
+        events[column] = events[column].replace("", pd.NA)
+    events.loc[events["TIPO_EVENTO"] == EventType.SALE_CREDIT.value, "MEIO_FINANCEIRO"] = pd.NA
+    return events.loc[:, list(EVENT_COLUMNS)]
+
+
+def cbs_tax_scenarios() -> pd.DataFrame:
+    scenarios = pd.read_csv(cbs_fixture_dir() / "tax_scenarios.csv", dtype=str, keep_default_na=False)
+    scenarios["DT_REFERENCIA_NORMATIVA"] = pd.to_datetime(scenarios["DT_REFERENCIA_NORMATIVA"]).dt.date
+    scenarios["E_BASELINE"] = scenarios["E_BASELINE"].map(lambda value: str(value).lower() == "true")
+    scenarios["ATIVO"] = scenarios["ATIVO"].map(lambda value: str(value).lower() == "true")
+    return scenarios.loc[:, list(TAX_SCENARIO_COLUMNS)]
+
+
+def cbs_tax_context(*, control: bool = False, invalid_control: bool = False) -> TaxContext:
+    scenarios = cbs_tax_scenarios()
+    if control:
+        control_row = scenarios.loc[scenarios["ID_CENARIO"] == "CBS_2026_BASE"].iloc[0].copy()
+        control_row["ID_CENARIO"] = "CBS_2026_CONTROLE"
+        control_row["DESCRICAO"] = "controle de orquestracao"
+        control_row["E_BASELINE"] = False
+        control_row["ATIVO"] = True
+        if invalid_control:
+            control_row["REGIME_ENTIDADE"] = "simples_nacional"
+        scenarios = pd.concat([scenarios, pd.DataFrame([control_row])], ignore_index=True)
+    return TaxContext(
+        entity_profile=pd.read_csv(cbs_fixture_dir() / "entity_profile.csv", dtype=str, keep_default_na=False),
+        fiscal_event_attributes=pd.read_csv(cbs_fixture_dir() / "fiscal_event_attributes.csv", dtype=str, keep_default_na=False),
+        tax_scenarios=scenarios,
+        tax_parameters=pd.read_csv(cbs_fixture_dir() / "tax_parameters.csv", dtype=str, keep_default_na=False),
+    )
+
+
+def cbs_workbook_inputs(tax_context: TaxContext | None = None) -> WorkbookInputs:
+    period = AccountingPeriod(date(2026, 8, 1), date(2026, 8, 31))
+    config = SimulationConfig(
+        simulation_id="SIM_CBS_WORKBOOK",
+        start_date=period.start_date,
+        end_date=period.end_date,
+        currency="BRL",
+        seed=0,
+        scenario_name="cbs_workbook",
+        spec_version=WORKBOOK_SPEC_VERSION,
+    )
+    chart_df = build_default_commercial_chart(period.start_date)
+    return WorkbookInputs(
+        simulation_config=config,
+        chart_of_accounts=chart_df,
+        account_role_mapping=build_default_account_role_mapping(),
+        events=cbs_events(),
+        statement_mapping=build_default_statement_mapping(chart_df),
+        tax_context=tax_context if tax_context is not None else cbs_tax_context(),
+    )
+
+
 def build_case(tmp_path, inputs: WorkbookInputs | None = None):
     path = tmp_path / "case.xlsx"
     build_workbook(inputs or workbook_inputs(), path)
@@ -270,13 +343,16 @@ def test_workbook_sheets_are_exactly_in_canonical_order(tmp_path):
         "DRE",
         "CENARIOS_TRIBUTARIOS",
         "FISCAL_PARAM",
+        "FISCAL_RESULTADOS_OPERACAO",
+        "FISCAL_APURACAO",
+        "COMPARATIVO_CENARIOS",
         "VALIDACOES",
         "PROVENIENCIA",
     )
     assert tuple(wb.sheetnames) == WORKBOOK_SHEETS
 
 
-def test_future_sheets_are_not_anticipated(tmp_path):
+def test_tax_output_sheets_are_derived_not_editable(tmp_path):
     _, wb = build_case(tmp_path)
     forbidden = {
         "CENTROS_CUSTO",
@@ -284,11 +360,18 @@ def test_future_sheets_are_not_anticipated(tmp_path):
         "HISTORICOS",
         "DFC",
         "DVA",
+    }
+    assert forbidden.isdisjoint(set(wb.sheetnames))
+    assert {
         "FISCAL_RESULTADOS_OPERACAO",
         "FISCAL_APURACAO",
         "COMPARATIVO_CENARIOS",
-    }
-    assert forbidden.isdisjoint(set(wb.sheetnames))
+    }.issubset(set(wb.sheetnames))
+    assert {
+        "FISCAL_RESULTADOS_OPERACAO",
+        "FISCAL_APURACAO",
+        "COMPARATIVO_CENARIOS",
+    }.isdisjoint(EDITABLE_SHEETS)
 
 
 def test_named_tables_exist_and_cover_expected_row_counts(tmp_path):
@@ -311,8 +394,11 @@ def test_named_tables_exist_and_cover_expected_row_counts(tmp_path):
         "DRE": 11,
         "CENARIOS_TRIBUTARIOS": 0,
         "FISCAL_PARAM": 0,
+        "FISCAL_RESULTADOS_OPERACAO": 0,
+        "FISCAL_APURACAO": 0,
+        "COMPARATIVO_CENARIOS": 0,
         "VALIDACOES": 12,
-        "PROVENIENCIA": 13,
+        "PROVENIENCIA": 14,
     }
     for sheet_name, table_name in TABLE_NAMES.items():
         assert table_name in wb[sheet_name].tables
@@ -555,6 +641,7 @@ def test_provenance_contains_spec_and_rule_versions(tmp_path):
     assert provenance["workbook_spec_version"] == WORKBOOK_SPEC_VERSION
     assert provenance["financial_statement_spec_version"] == FINANCIAL_STATEMENT_SPEC_VERSION
     assert provenance["tax_interface_spec_version"] == TAX_INTERFACE_SPEC_VERSION
+    assert provenance["counterfactual_report_spec_version"] == CBS_2026_COUNTERFACTUAL_REPORT_SPEC_VERSION
     assert provenance["posting_rule_version"] == "posting_rules_v1"
     assert provenance["statement_mapping_source"] == "MAPEAMENTO_DF"
     assert provenance["tax_context_configured"] == "FALSE"
@@ -665,11 +752,129 @@ def test_changing_only_tax_scenarios_and_parameters_does_not_change_accounting_c
         assert_frame_equal(sheet_frame(first, sheet_name), sheet_frame(second, sheet_name), check_dtype=False)
 
 
-def test_tax_output_sheets_are_not_materialized(tmp_path):
-    _, wb = build_case(tmp_path, workbook_inputs(tax_context=configured_tax_context()))
-    assert "FISCAL_RESULTADOS_OPERACAO" not in wb.sheetnames
-    assert "FISCAL_APURACAO" not in wb.sheetnames
-    assert "COMPARATIVO_CENARIOS" not in wb.sheetnames
+def test_one_active_tax_scenario_materializes_empty_tax_outputs(tmp_path):
+    path, wb = build_case(tmp_path, workbook_inputs(tax_context=configured_tax_context()))
+
+    assert {
+        "FISCAL_RESULTADOS_OPERACAO",
+        "FISCAL_APURACAO",
+        "COMPARATIVO_CENARIOS",
+    }.issubset(set(wb.sheetnames))
+    assert sheet_frame(path, "FISCAL_RESULTADOS_OPERACAO").empty
+    assert sheet_frame(path, "FISCAL_APURACAO").empty
+    assert sheet_frame(path, "COMPARATIVO_CENARIOS").empty
+
+
+def test_empty_tax_context_materializes_empty_tax_output_headers(tmp_path):
+    path, _ = build_case(tmp_path)
+
+    assert tuple(sheet_frame(path, "FISCAL_RESULTADOS_OPERACAO").columns) == FISCAL_OPERATION_WORKBOOK_COLUMNS
+    assert tuple(sheet_frame(path, "FISCAL_APURACAO").columns) == FISCAL_ASSESSMENT_WORKBOOK_COLUMNS
+    assert tuple(sheet_frame(path, "COMPARATIVO_CENARIOS").columns) == COUNTERFACTUAL_COMPARISON_WORKBOOK_COLUMNS
+    assert sheet_frame(path, "FISCAL_RESULTADOS_OPERACAO").empty
+    assert sheet_frame(path, "FISCAL_APURACAO").empty
+    assert sheet_frame(path, "COMPARATIVO_CENARIOS").empty
+
+
+def test_valid_counterfactual_tax_context_populates_fiscal_output_sheets(tmp_path):
+    path, _ = build_case(tmp_path, cbs_workbook_inputs(cbs_tax_context(control=True)))
+
+    operations = sheet_frame(path, "FISCAL_RESULTADOS_OPERACAO")
+    assessment = sheet_frame(path, "FISCAL_APURACAO")
+    comparison = sheet_frame(path, "COMPARATIVO_CENARIOS")
+
+    assert len(operations) == 4
+    assert len(assessment) == 2
+    assert len(comparison) == 1
+    assert set(operations["ID_CENARIO"]) == {"CBS_2026_BASE", "CBS_2026_CONTROLE"}
+    assert list(assessment["ID_CENARIO"]) == ["CBS_2026_BASE", "CBS_2026_CONTROLE"]
+    assert comparison.iloc[0]["ID_CENARIO_BASE"] == "CBS_2026_BASE"
+    assert comparison.iloc[0]["ID_CENARIO"] == "CBS_2026_CONTROLE"
+
+
+def test_fiscal_outputs_are_presented_in_reais_and_preserve_unknowns_as_blank(tmp_path):
+    path, _ = build_case(tmp_path, cbs_workbook_inputs(cbs_tax_context(control=True)))
+    operations = sheet_frame(path, "FISCAL_RESULTADOS_OPERACAO")
+    assessment = sheet_frame(path, "FISCAL_APURACAO")
+    comparison = sheet_frame(path, "COMPARATIVO_CENARIOS")
+
+    purchase = operations.loc[
+        (operations["ID_CENARIO"] == "CBS_2026_BASE") & (operations["ID_EVENTO"] == "E001")
+    ].iloc[0]
+    sale = operations.loc[
+        (operations["ID_CENARIO"] == "CBS_2026_BASE") & (operations["ID_EVENTO"] == "E002")
+    ].iloc[0]
+    assert decimal_value(purchase["BASE"]) == Decimal("1000.00")
+    assert decimal_value(purchase["CREDITO"]) == Decimal("9.00")
+    assert decimal_value(sale["DEBITO"]) == Decimal("18.00")
+
+    base_assessment = assessment.loc[assessment["ID_CENARIO"] == "CBS_2026_BASE"].iloc[0]
+    assert decimal_value(base_assessment["S_APUR"]) == Decimal("9.00")
+    assert decimal_value(base_assessment["T_RECOLHER"]) == Decimal("0.00")
+    assert base_assessment["P_CASH"] is None
+    assert base_assessment["E_DRE"] is None
+    assert decimal_value(base_assessment["C_SALDO"]) == Decimal("0.00")
+
+    row = comparison.iloc[0]
+    assert decimal_value(row["DELTA_S_APUR"]) == Decimal("0.00")
+    assert decimal_value(row["DELTA_T_RECOLHER"]) == Decimal("0.00")
+    assert row["DELTA_P_CASH"] is None
+    assert row["DELTA_E_DRE"] is None
+    assert decimal_value(row["DELTA_C_SALDO"]) == Decimal("0.00")
+
+
+def test_fiscal_rate_is_stored_as_fraction_and_formatted_as_percent(tmp_path):
+    path, wb = build_case(tmp_path, cbs_workbook_inputs(cbs_tax_context(control=True)))
+    operations = sheet_frame(path, "FISCAL_RESULTADOS_OPERACAO")
+    assert Decimal(str(operations.iloc[0]["ALIQUOTA"])) == Decimal("0.009")
+
+    ws = wb["FISCAL_RESULTADOS_OPERACAO"]
+    headers = [cell.value for cell in ws[1]]
+    rate_col = headers.index("ALIQUOTA") + 1
+    assert ws.cell(row=2, column=rate_col).number_format == "0.0000%"
+
+
+def test_regenerate_recalculates_fiscal_outputs_and_discards_manual_edits(tmp_path):
+    path, _ = build_case(tmp_path, cbs_workbook_inputs(cbs_tax_context(control=True)))
+    wb = load_workbook(path)
+    ws = wb["FISCAL_APURACAO"]
+    headers = [cell.value for cell in ws[1]]
+    ws.cell(row=2, column=headers.index("S_APUR") + 1, value=999999.99)
+    comparison_ws = wb["COMPARATIVO_CENARIOS"]
+    comparison_headers = [cell.value for cell in comparison_ws[1]]
+    comparison_ws.cell(row=2, column=comparison_headers.index("DELTA_S_APUR") + 1, value=12345.67)
+    wb.save(path)
+
+    regenerated = tmp_path / "regenerated_tax_outputs.xlsx"
+    regenerate_workbook(path, regenerated)
+
+    assessment = sheet_frame(regenerated, "FISCAL_APURACAO")
+    comparison = sheet_frame(regenerated, "COMPARATIVO_CENARIOS")
+    assert decimal_value(assessment.loc[assessment["ID_CENARIO"] == "CBS_2026_BASE", "S_APUR"].iloc[0]) == Decimal("9.00")
+    assert decimal_value(comparison.iloc[0]["DELTA_S_APUR"]) == Decimal("0.00")
+
+
+def test_load_workbook_inputs_ignores_fiscal_derived_sheets(tmp_path):
+    path, _ = build_case(tmp_path, cbs_workbook_inputs(cbs_tax_context(control=True)))
+    wb = load_workbook(path)
+    wb["FISCAL_RESULTADOS_OPERACAO"]["A2"] = "DERIVADO_ADULTERADO"
+    wb["FISCAL_APURACAO"]["A2"] = "DERIVADO_ADULTERADO"
+    wb["COMPARATIVO_CENARIOS"]["A2"] = "DERIVADO_ADULTERADO"
+    wb.save(path)
+
+    reloaded = load_workbook_inputs(path)
+
+    assert reloaded.tax_context is not None
+    assert list(reloaded.tax_context.tax_scenarios["ID_CENARIO"]) == ["CBS_2026_BASE", "CBS_2026_CONTROLE"]
+
+
+def test_invalid_counterfactual_experiment_prevents_workbook_generation(tmp_path):
+    output = tmp_path / "invalid_counterfactual.xlsx"
+
+    with pytest.raises(SchemaValidationError):
+        build_workbook(cbs_workbook_inputs(cbs_tax_context(control=True, invalid_control=True)), output)
+
+    assert not output.exists()
 
 
 def test_cash_recoding_in_workbook_inputs_flows_to_postings(tmp_path):

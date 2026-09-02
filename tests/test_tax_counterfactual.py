@@ -18,7 +18,6 @@ from accounting_sim.tax_counterfactual import (
     run_cbs_2026_counterfactual_experiment,
     validate_cbs_2026_counterfactual_experiment,
 )
-from accounting_sim.workbook import WORKBOOK_SHEETS
 
 
 BASE_SCENARIO_ID = "CBS_2026_BASE"
@@ -340,7 +339,12 @@ def test_counterfactual_module_does_not_hard_code_new_tax_values() -> None:
         assert forbidden not in source
 
 
-def test_workbook_tax_output_sheets_remain_reserved() -> None:
-    assert "FISCAL_RESULTADOS_OPERACAO" not in WORKBOOK_SHEETS
-    assert "FISCAL_APURACAO" not in WORKBOOK_SHEETS
-    assert "COMPARATIVO_CENARIOS" not in WORKBOOK_SHEETS
+def test_workbook_materialization_is_not_implemented_in_counterfactual_executor() -> None:
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "src/accounting_sim/tax_counterfactual.py"
+    ).read_text(encoding="utf-8")
+
+    assert "FISCAL_RESULTADOS_OPERACAO" not in source
+    assert "FISCAL_APURACAO" not in source
+    assert "COMPARATIVO_CENARIOS" not in source
