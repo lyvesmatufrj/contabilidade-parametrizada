@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "accounting-sim"
 version = "0.1.0"
-description = "MVP contábil parametrizado conforme specs 00-07."
+description = "MVP contábil parametrizado conforme specs 00-08."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

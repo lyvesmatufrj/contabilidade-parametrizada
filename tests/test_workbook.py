@@ -13,8 +13,12 @@ from accounting_sim.account_mapping import DEFAULT_ACCOUNT_ROLE_MAP, build_defau
 from accounting_sim.canonical import (
     ACCOUNT_ROLE_MAPPING_COLUMNS,
     CHART_OF_ACCOUNTS_COLUMNS,
+    ENTITY_PROFILE_COLUMNS,
     EVENT_COLUMNS,
+    FISCAL_EVENT_ATTRIBUTE_COLUMNS,
     STATEMENT_MAPPING_COLUMNS,
+    TAX_PARAMETER_COLUMNS,
+    TAX_SCENARIO_COLUMNS,
     AccountingPeriod,
     DebitCredit,
     EventClass,
@@ -23,8 +27,10 @@ from accounting_sim.canonical import (
     EventType,
     Origin,
     PaymentTerm,
+    ScalarValueType,
     SimulationConfig,
     SchemaValidationError,
+    TaxSourceType,
 )
 from accounting_sim.chart_of_accounts import build_default_commercial_chart, validate_chart_of_accounts
 from accounting_sim.events import EVENT_SPEC_VERSION
@@ -33,6 +39,12 @@ from accounting_sim.statements import (
     FINANCIAL_STATEMENT_SPEC_VERSION,
     build_default_statement_mapping,
     validate_statement_mapping,
+)
+from accounting_sim.tax_context import (
+    TAX_INTERFACE_SPEC_VERSION,
+    TaxContext,
+    build_empty_tax_context,
+    validate_tax_context,
 )
 from accounting_sim.workbook import (
     EVENT_WORKBOOK_COLUMNS,
@@ -124,6 +136,7 @@ def workbook_inputs(
     account_role_mapping: pd.DataFrame | None = None,
     events: pd.DataFrame | None = None,
     statement_mapping: pd.DataFrame | None = None,
+    tax_context: TaxContext | None = None,
 ) -> WorkbookInputs:
     chart_df = chart() if chart_of_accounts is None else chart_of_accounts
     return WorkbookInputs(
@@ -132,7 +145,70 @@ def workbook_inputs(
         account_role_mapping=build_default_account_role_mapping() if account_role_mapping is None else account_role_mapping,
         events=canonical_events() if events is None else events,
         statement_mapping=build_default_statement_mapping(chart_df) if statement_mapping is None else statement_mapping,
+        tax_context=tax_context,
     )
+
+
+def configured_tax_context(version: str = "VERSAO_TESTE", scenario_id: str = "CENARIO_TESTE") -> TaxContext:
+    entity_profile = pd.DataFrame(
+        [
+            ("ENTIDADE_TESTE", "porte_teste", "micro", ScalarValueType.STRING.value, Origin.TEMPLATE.value),
+            ("ENTIDADE_TESTE", "uf_teste", "RJ", ScalarValueType.STRING.value, Origin.TEMPLATE.value),
+        ],
+        columns=ENTITY_PROFILE_COLUMNS,
+        dtype=object,
+    )
+    fiscal_event_attributes = pd.DataFrame(
+        [
+            ("E003", "atributo_fiscal_teste", "mercadoria_teste", ScalarValueType.STRING.value, Origin.TEMPLATE.value),
+        ],
+        columns=FISCAL_EVENT_ATTRIBUTE_COLUMNS,
+        dtype=object,
+    )
+    tax_scenarios = pd.DataFrame(
+        [
+            (
+                scenario_id,
+                "ENTIDADE_TESTE",
+                "Cenario tributario artificial",
+                True,
+                date(2026, 1, 31),
+                "REGIME_TESTE",
+                "REGIME_TESTE_IR",
+                "REGIME_TESTE_CONSUMO",
+                "",
+                version,
+                True,
+            ),
+        ],
+        columns=TAX_SCENARIO_COLUMNS,
+        dtype=object,
+    )
+    tax_parameters = pd.DataFrame(
+        [
+            (
+                f"PARAM_{version}",
+                version,
+                "REGRA_TESTE",
+                "TRIBUTO_TESTE",
+                "CHAVE_TESTE",
+                "123.45",
+                ScalarValueType.DECIMAL.value,
+                TaxSourceType.TECHNICAL.value,
+                "Fonte artificial de teste",
+                "https://example.invalid/fonte-teste",
+                "DISPOSITIVO_TESTE",
+                "NORMA_TESTE",
+                date(2026, 1, 1),
+                None,
+                date(2026, 1, 31),
+                "REGRA_TESTE_V1",
+            ),
+        ],
+        columns=TAX_PARAMETER_COLUMNS,
+        dtype=object,
+    )
+    return TaxContext(entity_profile, fiscal_event_attributes, tax_scenarios, tax_parameters)
 
 
 def build_case(tmp_path, inputs: WorkbookInputs | None = None):
@@ -175,23 +251,55 @@ def test_build_workbook_creates_xlsx_and_can_be_reopened(tmp_path):
 
 def test_workbook_sheets_are_exactly_in_canonical_order(tmp_path):
     _, wb = build_case(tmp_path)
+    assert WORKBOOK_SHEETS == (
+        "README",
+        "CONFIG",
+        "ENTIDADE",
+        "PLANO_CONTAS",
+        "MAPEAMENTO_CONTAS",
+        "EVENTOS",
+        "EVENTOS_FISCAIS",
+        "LANCAMENTOS",
+        "PARTIDAS",
+        "VINCULO_EVENTO_LCTO",
+        "DIARIO",
+        "RAZAO",
+        "BALANCETE",
+        "MAPEAMENTO_DF",
+        "BP",
+        "DRE",
+        "CENARIOS_TRIBUTARIOS",
+        "FISCAL_PARAM",
+        "VALIDACOES",
+        "PROVENIENCIA",
+    )
     assert tuple(wb.sheetnames) == WORKBOOK_SHEETS
 
 
 def test_future_sheets_are_not_anticipated(tmp_path):
     _, wb = build_case(tmp_path)
-    forbidden = {"ENTIDADE", "CENTROS_CUSTO", "PARTICIPANTES", "HISTORICOS", "DFC", "DVA", "CENARIOS"}
+    forbidden = {
+        "CENTROS_CUSTO",
+        "PARTICIPANTES",
+        "HISTORICOS",
+        "DFC",
+        "DVA",
+        "FISCAL_RESULTADOS_OPERACAO",
+        "FISCAL_APURACAO",
+        "COMPARATIVO_CENARIOS",
+    }
     assert forbidden.isdisjoint(set(wb.sheetnames))
-    assert not any(name.startswith("FISCAL_") for name in wb.sheetnames)
 
 
 def test_named_tables_exist_and_cover_expected_row_counts(tmp_path):
     path, wb = build_case(tmp_path)
     expected_rows = {
         "CONFIG": 7,
+        "ENTIDADE": 0,
         "PLANO_CONTAS": len(chart()),
         "MAPEAMENTO_CONTAS": len(build_default_account_role_mapping()),
         "EVENTOS": len(canonical_events()),
+        "EVENTOS_FISCAIS": 0,
         "LANCAMENTOS": 5,
         "PARTIDAS": 10,
         "VINCULO_EVENTO_LCTO": 5,
@@ -201,8 +309,10 @@ def test_named_tables_exist_and_cover_expected_row_counts(tmp_path):
         "MAPEAMENTO_DF": len(build_default_statement_mapping(chart())),
         "BP": 22,
         "DRE": 11,
-        "VALIDACOES": 7,
-        "PROVENIENCIA": 10,
+        "CENARIOS_TRIBUTARIOS": 0,
+        "FISCAL_PARAM": 0,
+        "VALIDACOES": 12,
+        "PROVENIENCIA": 13,
     }
     for sheet_name, table_name in TABLE_NAMES.items():
         assert table_name in wb[sheet_name].tables
@@ -252,6 +362,41 @@ def test_statement_mapping_round_trip_preserves_accounts_and_lines(tmp_path):
     assert validate_statement_mapping(reloaded.statement_mapping, reloaded.chart_of_accounts).ok is True
 
 
+def test_empty_tax_context_round_trip_preserves_exact_schemas(tmp_path):
+    path, _ = build_case(tmp_path)
+    reloaded = load_workbook_inputs(path)
+    expected = build_empty_tax_context()
+    assert reloaded.tax_context is not None
+    assert tuple(reloaded.tax_context.entity_profile.columns) == ENTITY_PROFILE_COLUMNS
+    assert tuple(reloaded.tax_context.fiscal_event_attributes.columns) == FISCAL_EVENT_ATTRIBUTE_COLUMNS
+    assert tuple(reloaded.tax_context.tax_scenarios.columns) == TAX_SCENARIO_COLUMNS
+    assert tuple(reloaded.tax_context.tax_parameters.columns) == TAX_PARAMETER_COLUMNS
+    assert reloaded.tax_context.entity_profile.empty
+    assert reloaded.tax_context.fiscal_event_attributes.empty
+    assert reloaded.tax_context.tax_scenarios.empty
+    assert reloaded.tax_context.tax_parameters.empty
+    assert validate_tax_context(reloaded.tax_context, reloaded.events).ok is True
+    assert_frame_equal(reloaded.tax_context.entity_profile, expected.entity_profile, check_dtype=False)
+
+
+def test_configured_tax_context_round_trip_preserves_values_dates_and_bools(tmp_path):
+    context = configured_tax_context()
+    path, _ = build_case(tmp_path, workbook_inputs(tax_context=context))
+    reloaded = load_workbook_inputs(path)
+    assert reloaded.tax_context is not None
+    assert_frame_equal(reloaded.tax_context.entity_profile, context.entity_profile, check_dtype=False)
+    assert_frame_equal(reloaded.tax_context.fiscal_event_attributes, context.fiscal_event_attributes, check_dtype=False)
+    assert_frame_equal(reloaded.tax_context.tax_scenarios, context.tax_scenarios, check_dtype=False)
+    assert_frame_equal(reloaded.tax_context.tax_parameters, context.tax_parameters, check_dtype=False)
+    assert isinstance(reloaded.tax_context.tax_scenarios.loc[0, "DT_REFERENCIA_NORMATIVA"], date)
+    assert isinstance(reloaded.tax_context.tax_scenarios.loc[0, "E_BASELINE"], bool)
+    assert isinstance(reloaded.tax_context.tax_scenarios.loc[0, "ATIVO"], bool)
+    assert isinstance(reloaded.tax_context.tax_parameters.loc[0, "VIG_INI"], date)
+    assert isinstance(reloaded.tax_context.tax_parameters.loc[0, "DATA_CONSULTA"], date)
+    assert reloaded.tax_context.tax_parameters.loc[0, "VALOR"] == "123.45"
+    assert validate_tax_context(reloaded.tax_context, reloaded.events).ok is True
+
+
 def test_events_round_trip_preserves_ids_dates_and_cents(tmp_path):
     path, _ = build_case(tmp_path)
     reloaded = load_workbook_inputs(path)
@@ -268,6 +413,30 @@ def test_events_sheet_uses_reais_columns_not_cents(tmp_path):
     assert tuple(events.columns) == EVENT_WORKBOOK_COLUMNS
     assert "VL_EVENTO_CENTS" not in events.columns
     assert decimal_value(events.loc[events["ID_EVENTO"] == "E001", "VL_EVENTO"].iloc[0]) == Decimal("100000.00")
+
+
+def test_event_columns_are_not_changed_by_tax_interface(tmp_path):
+    path, _ = build_case(tmp_path, workbook_inputs(tax_context=configured_tax_context()))
+    reloaded = load_workbook_inputs(path)
+    assert tuple(EVENT_COLUMNS) == (
+        "ID_EVENTO",
+        "DT_EVENTO",
+        "CLASSE_EVENTO",
+        "TIPO_EVENTO",
+        "DIRECAO",
+        "NATUREZA",
+        "VL_EVENTO_CENTS",
+        "VL_CUSTO_CENTS",
+        "MEIO_FINANCEIRO",
+        "CATEGORIA_DESPESA",
+        "COD_PART",
+        "COND_PAGTO",
+        "DOC_REF",
+        "HIST",
+        "ORIGEM",
+        "SPEC_VERSION",
+    )
+    assert_frame_equal(reloaded.events, canonical_events(), check_dtype=False)
 
 
 def test_money_reader_rejects_more_than_two_decimal_places(tmp_path):
@@ -358,6 +527,26 @@ def test_validations_sheet_has_no_failures_for_canonical_case(tmp_path):
     validations = sheet_frame(path, "VALIDACOES")
     assert set(validations["OK"]) == {True}
     assert set(validations["MENSAGEM"]) == {"ok"}
+    assert {
+        "ENTIDADE",
+        "EVENTOS_FISCAIS",
+        "CENARIOS_TRIBUTARIOS",
+        "FISCAL_PARAM",
+        "CONTEXTO_TRIBUTARIO",
+    }.issubset(set(validations["ETAPA"]))
+
+
+def test_validations_sheet_has_no_failures_for_configured_tax_context(tmp_path):
+    path, _ = build_case(tmp_path, workbook_inputs(tax_context=configured_tax_context()))
+    validations = sheet_frame(path, "VALIDACOES")
+    assert set(validations["OK"]) == {True}
+    assert {
+        "ENTIDADE",
+        "EVENTOS_FISCAIS",
+        "CENARIOS_TRIBUTARIOS",
+        "FISCAL_PARAM",
+        "CONTEXTO_TRIBUTARIO",
+    }.issubset(set(validations["ETAPA"]))
 
 
 def test_provenance_contains_spec_and_rule_versions(tmp_path):
@@ -365,9 +554,21 @@ def test_provenance_contains_spec_and_rule_versions(tmp_path):
     provenance = sheet_frame(path, "PROVENIENCIA").set_index("CHAVE")["VALOR"].to_dict()
     assert provenance["workbook_spec_version"] == WORKBOOK_SPEC_VERSION
     assert provenance["financial_statement_spec_version"] == FINANCIAL_STATEMENT_SPEC_VERSION
+    assert provenance["tax_interface_spec_version"] == TAX_INTERFACE_SPEC_VERSION
     assert provenance["posting_rule_version"] == "posting_rules_v1"
     assert provenance["statement_mapping_source"] == "MAPEAMENTO_DF"
+    assert provenance["tax_context_configured"] == "FALSE"
+    assert provenance["tax_normative_versions"] is None
     assert provenance["simulation_id"] == CONFIG.simulation_id
+
+
+def test_provenance_records_configured_tax_context_without_copying_parameters(tmp_path):
+    path, _ = build_case(tmp_path, workbook_inputs(tax_context=configured_tax_context(version="VERSAO_TESTE")))
+    provenance_frame = sheet_frame(path, "PROVENIENCIA")
+    provenance = provenance_frame.set_index("CHAVE")["VALOR"].to_dict()
+    assert provenance["tax_context_configured"] == "TRUE"
+    assert provenance["tax_normative_versions"] == "VERSAO_TESTE"
+    assert "TRIBUTO_TESTE" not in set(provenance_frame["VALOR"])
 
 
 def test_manual_trial_balance_edit_is_ignored_by_regeneration(tmp_path):
@@ -444,6 +645,31 @@ def test_manual_income_statement_edit_is_ignored_by_regeneration(tmp_path):
     regenerate_workbook(path, regenerated)
     dre = sheet_frame(regenerated, "DRE")
     assert decimal_value(row_by_line(dre, "DRE_RESULTADO_PERIODO")["VL"]) == Decimal("30000.00")
+
+
+def test_changing_only_tax_scenarios_and_parameters_does_not_change_accounting_core(tmp_path):
+    first = tmp_path / "first_tax_context.xlsx"
+    second = tmp_path / "second_tax_context.xlsx"
+    build_workbook(workbook_inputs(tax_context=configured_tax_context(version="VERSAO_TESTE_A", scenario_id="CENARIO_A")), first)
+    build_workbook(workbook_inputs(tax_context=configured_tax_context(version="VERSAO_TESTE_B", scenario_id="CENARIO_B")), second)
+    for sheet_name in (
+        "LANCAMENTOS",
+        "PARTIDAS",
+        "VINCULO_EVENTO_LCTO",
+        "DIARIO",
+        "RAZAO",
+        "BALANCETE",
+        "BP",
+        "DRE",
+    ):
+        assert_frame_equal(sheet_frame(first, sheet_name), sheet_frame(second, sheet_name), check_dtype=False)
+
+
+def test_tax_output_sheets_are_not_materialized(tmp_path):
+    _, wb = build_case(tmp_path, workbook_inputs(tax_context=configured_tax_context()))
+    assert "FISCAL_RESULTADOS_OPERACAO" not in wb.sheetnames
+    assert "FISCAL_APURACAO" not in wb.sheetnames
+    assert "COMPARATIVO_CENARIOS" not in wb.sheetnames
 
 
 def test_cash_recoding_in_workbook_inputs_flows_to_postings(tmp_path):

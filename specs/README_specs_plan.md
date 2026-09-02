@@ -36,11 +36,11 @@ Critério de sucesso da primeira rodada:
 
 ## 3. Fronteira do primeiro MVP
 
-O MVP completo, quando as specs 00–10 estiverem implementadas, deve conter:
+O MVP contábil inicial, concluído nas specs 00–07, contém:
 
 - uma empresa comercial simples;
 - um plano de contas plausível e hierárquico;
-- 10–20 tipos de evento econômico;
+- tipos mínimos de evento econômico;
 - um período simulado;
 - escrituração por partidas dobradas;
 - Livro Diário e Livro Razão derivados;
@@ -48,7 +48,9 @@ O MVP completo, quando as specs 00–10 estiverem implementadas, deve conter:
 - BP e DRE;
 - workbook Excel auditável;
 - testes de integridade;
-- reprodução determinística dada a mesma configuração/semente.
+- reprodução determinística dada a mesma configuração.
+
+O caminho crítico foi revisado a partir da Spec 08. As specs 08–11 passam a formar um MVP tributário contrafactual sobre uma base econômico-operacional fixa, sem geração sintética no curto prazo.
 
 Não fazem parte desse MVP:
 
@@ -60,7 +62,8 @@ Não fazem parte desse MVP:
 - banco de dados;
 - API ou aplicação web;
 - ERP sintético completo;
-- calibração empírica fina antes de existir corpus real.
+- calibração empírica fina antes de existir corpus real;
+- geração/projeção sintética de novas bases econômicas, deslocada para fase posterior.
 
 ## 4. Sequência de specs
 
@@ -74,18 +77,19 @@ Não fazem parte desse MVP:
 | 05 | `05_ledger_trial_balance.md` | Como `Lambda_t` vira Razão e balancete? | saldos, movimentos, Diário/Razão e fechamento |
 | 06 | `06_excel_workbook.md` | Como o modelo lógico aparece no Excel? | contrato de abas, tabelas nomeadas, editabilidade e geração `.xlsx` |
 | 07 | `07_financial_statements.md` | Como contas viram BP/DRE? | mapeamento das contas e demonstrações mínimas |
-| 08 | `08_synthetic_generation.md` | Como substituir eventos manuais por geração controlada? | gerador paramétrico com semente explícita |
-| 09 | `09_validation_realism.md` | Como testar validade e plausibilidade? | invariantes + critérios de verossimilhança |
-| 10 | `10_end_to_end_demo.md` | O sistema funciona de ponta a ponta? | cenário reproduzível e workbook de demonstração |
-| 11 | `11_tax_interface.md` | Como conectar depois os Volumes I/II? | contrato da futura interface tributária, sem implementá-la |
+| 08 | `08_counterfactual_tax_interface.md` | Como representar fatos fiscais, entidade, regime, versão normativa e proveniência? | interface tributária contrafactual |
+| 09 | futura spec | Como selecionar regras efetivas e calcular um primeiro recorte tributário? | motor tributário mínimo |
+| 10 | futura spec | Como executar vários pares `(rho, Theta)` sobre a mesma base? | experimento contrafactual |
+| 11 | futura spec | Como comparar resultados e produzir uma decisão auditável? | comparação/relatório de cenários |
+| posterior | futura spec | Como gerar/projetar novas bases econômicas? | geração sintética, calibração e projeção |
 
-A spec 11 deve preservar desde cedo a possibilidade de calcular no futuro
+A spec 08 preserva desde cedo a possibilidade de calcular no futuro
 
 ```text
-(Raz_t, u_t, rho_t, eta_t, Theta_t^eff) -> Y_t^tax
+u_obs + eta_t + rho_t + Theta_t -> Y_t^tax
 ```
 
-mas **não** deve implementar IBS, CBS, IRPJ, CSLL ou regimes tributários no primeiro ciclo.
+mas **não** implementa IBS, CBS, IRPJ, CSLL, regimes tributários, base, alíquota, crédito, débito ou apuração.
 
 ## 5. Marcos de desenvolvimento
 
@@ -109,21 +113,25 @@ Critério: abrir o `.xlsx` e auditar visualmente
 evento <-> lançamento <-> partida <-> Razão <-> BP/DRE
 ```
 
-### Marco C — simulação
+### Marco C — experimento tributário contrafactual
 
-Specs 08–10.
+Specs 08–11.
 
 ```text
-Omega^sim -> u_t^(Omega^sim) -> workbook
+bar_zeta_t + (rho_t^(s), Theta_t^(s)) -> Y_t^(s)
 ```
 
-`Omega^sim` é o objeto canônico do Volume III para a configuração computacional da simulação.
+A camada tributária reutilizará `rho_t`, `eta_t`, `zeta_t`, `Theta_t^tax`, `Theta_t^eff` e `Prov`, preservando a base factual fixa entre cenários.
 
-### Marco D — tributação
+### Marco D — projeção/geração de bases econômicas
 
-Spec 11 como contrato; implementação tributária em um ciclo separado.
+Fase posterior.
 
-A camada tributária reutilizará `rho_t`, `eta_t`, `zeta_t`, `Theta_t^eff` e os operadores dos Volumes I/II depois que o núcleo contábil estiver validado.
+```text
+Omega^sim -> u_t^(Omega^sim)
+```
+
+`Omega^sim` continua reservado como objeto canônico do Volume III. A geração sintética não foi descartada; apenas deixou de ser o caminho crítico atual.
 
 ## 6. Estrutura obrigatória de cada spec
 

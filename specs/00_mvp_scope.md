@@ -302,3 +302,24 @@ As specs 01 e 02 completarão os demais arquivos do scaffold.
 Nenhuma spec anterior.
 
 Esta spec é normativa para todas as seguintes.
+
+## Adendo de transição — Spec 08
+
+As specs 00–07 concluíram o MVP contábil inicial:
+
+```text
+P_t + u_t -> Lambda_t -> Raz_t -> b_t -> BP/DRE -> Wb_t
+```
+
+A partir da Spec 08, o caminho crítico do projeto passa a ser o MVP tributário contrafactual:
+
+```text
+base econômico-operacional fixa
+    + eta_t
+    + {(rho_t^(s), Theta_t^(s))}_s
+    -> contexto tributário validado
+```
+
+As restrições de fora de escopo acima permanecem como histórico do MVP contábil inicial. Elas não proíbem a abertura posterior da camada tributária, desde que essa camada permaneça paralela ao núcleo contábil e não altere `EVENTOS`, `Lambda_t`, `Raz_t`, `b_t`, BP ou DRE já validados.
+
+A geração sintética associada a `Omega^sim` foi deslocada para fase posterior. Ela não foi removida conceitualmente dos Volumes I–III.

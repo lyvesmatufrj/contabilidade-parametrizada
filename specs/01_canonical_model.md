@@ -100,14 +100,18 @@ Não exigir bijeção 1:1 entre matemática e classes Python.
 | `T_{k,t}` | `event` | linha/registro | linha de `EVENTOS` |
 | `vartheta_t` | `rules` | configuração reservada | governança |
 | `theta_t^acct` | `accounting_rules` | templates/funções | reservado |
-| `Theta_t^tax` | `tax_rules` | **reservado, não implementar** | `FISCAL_*` futuro |
+| `Theta_t^tax` | `tax_parameters` | parâmetros versionados com proveniência | `FISCAL_PARAM` |
 | `G^S` | `statement_aggregator` | função futura | BP/DRE/... |
 | `Lambda_t` | `journal_entries` | tabelas de cabeçalhos + partidas | `LANCAMENTOS` + `PARTIDAS` |
-| `rho_t` | `tax_regime_config` | reservado | `ENTIDADE` futuro |
-| `eta_t` | `entity_profile` | configuração simples | `ENTIDADE` |
-| `zeta_t` | `simulation_input` | composição lógica | não é uma aba única |
-| `\mathfrak E_{j,t}` | `effective_tax_rule_selector` | reservado | reservado |
-| `Prov` | `provenance` | metadados | `PROVENIENCIA` |
+| `rho_t` | `tax_scenarios` / linha de cenário | campos por eixo de regime e versão normativa | `CENARIOS_TRIBUTARIOS` |
+| `eta_t` | `entity_profile` | `DataFrame` normalizado em formato longo | `ENTIDADE` |
+| `zeta_t` | `tax_context` / composição lógica | composição, não tabela única | composição |
+| `bar_zeta_t` | `fixed_tax_base` | composição factual fixa | composição |
+| `u_t^min` | `events + fiscal_event_attributes` | composição lógica de fatos contábeis e fiscais | `EVENTOS` + `EVENTOS_FISCAIS` |
+| `\chi_t` | `tax_regime_admissibility` | reservado para Spec 09 | derivado futuro |
+| `\mathfrak E_{j,t}` | `effective_tax_rule_selector` | reservado para Spec 09 | derivado futuro |
+| `Theta_t^eff` | `effective_tax_rules` | reservado para Spec 09 | derivado futuro |
+| `Prov` | proveniência normativa | colunas obrigatórias de `FISCAL_PARAM` | `FISCAL_PARAM` |
 | `Q_t` | `source_bundle` | reservado | fontes/importações |
 | `P_t` | `chart_of_accounts` | `DataFrame` validado | `PLANO_CONTAS` |
 | `C_t` (conjunto de contas) | `accounts` | linhas de `chart_of_accounts` | `PLANO_CONTAS` |
@@ -122,6 +126,40 @@ Não exigir bijeção 1:1 entre matemática e classes Python.
 | `Wb_t` | `workbook` | arquivo `.xlsx` | workbook |
 | `Omega^sim` | `simulation_config` | dict/dataclass simples | `CONFIG` |
 | `Gamma` | `calibration_profile` | reservado | futuro |
+
+## Representações introduzidas na Spec 08
+
+A Spec 08 materializa a interface tributária contrafactual sem implementar cálculo fiscal:
+
+```text
+ENTIDADE
+    -> eta_t
+
+EVENTOS + EVENTOS_FISCAIS
+    -> u_t^min candidato
+
+CENARIOS_TRIBUTARIOS
+    -> rho_t^(s) + referência a Theta_t^(s)
+
+FISCAL_PARAM
+    -> parâmetros versionados de Theta_t^tax + Prov(p)
+```
+
+`ENTIDADE`, `EVENTOS` e `EVENTOS_FISCAIS` pertencem à base factual fixa. Cenários não devem duplicar nem modificar esses objetos.
+
+Continuam reservados para a Spec 09:
+
+```text
+chi_t
+mathfrak E_t
+Theta_t^eff
+B_j
+tau_j
+C_j
+D_j
+S_apur
+Y_tax
+```
 
 ## Nomes de campos
 

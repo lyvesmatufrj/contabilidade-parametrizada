@@ -36,6 +36,21 @@ class Origin(StrEnum):
     ADJUSTED = "ajustada"
 
 
+class ScalarValueType(StrEnum):
+    STRING = "str"
+    INTEGER = "int"
+    DECIMAL = "decimal"
+    BOOLEAN = "bool"
+    DATE = "date"
+
+
+class TaxSourceType(StrEnum):
+    NORMATIVE = "norm"
+    REGULATORY = "reg"
+    TECHNICAL = "tec"
+    OPERATIONAL = "oper"
+
+
 class EventClass(StrEnum):
     TRANSACTION = "TR"
     ADJUSTMENT = "ADJ"
@@ -102,6 +117,9 @@ class ValidationIssue:
     event_id: str | None = None
     entry_id: str | None = None
     posting_id: str | None = None
+    entity_id: str | None = None
+    scenario_id: str | None = None
+    tax_param_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -141,6 +159,89 @@ EVENT_COLUMNS: tuple[str, ...] = (
     "HIST",
     "ORIGEM",
     "SPEC_VERSION",
+)
+
+ENTITY_PROFILE_COLUMNS: tuple[str, ...] = (
+    "ID_ENTIDADE",
+    "ATRIBUTO",
+    "VALOR",
+    "TIPO_VALOR",
+    "ORIGEM",
+)
+
+FISCAL_EVENT_ATTRIBUTE_COLUMNS: tuple[str, ...] = (
+    "ID_EVENTO",
+    "ATRIBUTO_FISCAL",
+    "VALOR",
+    "TIPO_VALOR",
+    "ORIGEM",
+)
+
+TAX_SCENARIO_COLUMNS: tuple[str, ...] = (
+    "ID_CENARIO",
+    "ID_ENTIDADE",
+    "DESCRICAO",
+    "E_BASELINE",
+    "DT_REFERENCIA_NORMATIVA",
+    "REGIME_ENTIDADE",
+    "REGIME_IR",
+    "REGIME_CONSUMO",
+    "REGIME_ESPECIAL",
+    "ID_VERSAO_NORMATIVA",
+    "ATIVO",
+)
+
+TAX_PARAMETER_COLUMNS: tuple[str, ...] = (
+    "ID_PARAM",
+    "ID_VERSAO_NORMATIVA",
+    "ID_REGRA",
+    "TRIBUTO",
+    "CHAVE_PARAM",
+    "VALOR",
+    "TIPO_VALOR",
+    "TIPO_FONTE",
+    "FONTE_TITULO",
+    "FONTE_URL",
+    "DISPOSITIVO",
+    "VERSAO_NORMA",
+    "VIG_INI",
+    "VIG_FIM",
+    "DATA_CONSULTA",
+    "VERSAO_REGRA",
+)
+
+TAX_OPERATION_RESULT_COLUMNS: tuple[str, ...] = (
+    "ID_CENARIO",
+    "ID_EVENTO",
+    "TRIBUTO",
+    "INCIDE",
+    "BASE_CENTS",
+    "ALIQUOTA",
+    "CREDITO_CENTS",
+    "DEBITO_CENTS",
+    "VERSAO_REGRA",
+)
+
+TAX_ASSESSMENT_RESULT_COLUMNS: tuple[str, ...] = (
+    "ID_CENARIO",
+    "TRIBUTO",
+    "S_APUR_CENTS",
+    "T_RECOLHER_CENTS",
+    "P_CASH_CENTS",
+    "E_DRE_CENTS",
+    "C_SALDO_CENTS",
+    "VERSAO_REGRA",
+)
+
+COUNTERFACTUAL_COMPARISON_COLUMNS: tuple[str, ...] = (
+    "ID_CENARIO_BASE",
+    "ID_CENARIO",
+    "TRIBUTO",
+    "DELTA_S_APUR_CENTS",
+    "DELTA_T_RECOLHER_CENTS",
+    "DELTA_P_CASH_CENTS",
+    "DELTA_E_DRE_CENTS",
+    "DELTA_C_SALDO_CENTS",
 )
 
 ACCOUNT_ROLE_MAPPING_COLUMNS: tuple[str, ...] = (
