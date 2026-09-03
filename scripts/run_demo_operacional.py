@@ -128,14 +128,14 @@ def _write_status(
         ],
         columns=RUN_STATUS_COLUMNS,
     )
-    frame.to_csv(output_dir / "run_status.csv", index=False,encoding="utf-8-sig")
+    frame.to_csv(output_dir / "run_status.csv", index=False, encoding="utf-8-sig")
 
 
 def _best_effort_run_id(input_dir: Path) -> str:
     request = input_dir / "run_request.csv"
     if request.exists():
         try:
-            frame = pd.read_csv(request, dtype=str, keep_default_na=False)
+            frame = pd.read_csv(request, dtype=str, keep_default_na=False, encoding="utf-8-sig")
             if "RUN_ID" in frame.columns and len(frame) == 1:
                 value = str(frame.iloc[0]["RUN_ID"]).strip()
                 if value:

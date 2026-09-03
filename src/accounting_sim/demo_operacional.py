@@ -69,6 +69,8 @@ REQUIRED_ANALYSIS_KEYS = frozenset(
 ENTITY_ID = "ENT_SIMPL_2027"
 BASE_SCENARIO_ID = "SIMPLES_2027_PURO"
 ALT_SCENARIO_ID = "SIMPLES_2027_HIBRIDO"
+SUPPORTED_OPERATION_START = date(2027, 1, 1)
+SUPPORTED_OPERATION_END = date(2027, 6, 30)
 
 MEMORY_COLUMNS = (
     "SECAO",
@@ -141,7 +143,9 @@ def load_demo_inputs(input_dir: str | Path) -> DemoOperationalInputs:
 
     entity = _read_required_csv(base / "entity_input.csv", ENTITY_INPUT_COLUMNS)
     operations = _read_required_csv(
-        base / "operations_input.csv", OPERATIONS_INPUT_COLUMNS
+        base / "operations_input.csv",
+        OPERATIONS_INPUT_COLUMNS,
+        optional_blank_columns=frozenset({"OBSERVACAO"}),
     )
     analysis = _read_required_csv(
         base / "analysis_input.csv", ANALYSIS_INPUT_COLUMNS
@@ -649,12 +653,17 @@ def _validate_analysis_input(frame: pd.DataFrame) -> None:
         )
 
 
-def _read_required_csv(path: Path, expected_columns: tuple[str, ...]) -> pd.DataFrame:
+def _read_required_csv(
+    path: Path,
+    expected_columns: tuple[str, ...],
+    *,
+    optional_blank_columns: frozenset[str] = frozenset(),
+) -> pd.DataFrame:
     if not path.exists():
         raise DemoInputError(f"Arquivo de entrada ausente: {path.name}.")
 
     try:
-        frame = pd.read_csv(path, dtype=str, keep_default_na=False)
+        frame = pd.read_csv(path, dtype=str, keep_default_na=False, encoding="utf-8-sig")
     except Exception as exc:
         raise DemoInputError(f"Falha ao ler {path.name}: {exc}") from exc
 
@@ -665,7 +674,8 @@ def _read_required_csv(path: Path, expected_columns: tuple[str, ...]) -> pd.Data
             f"Esperado={expected_columns}; recebido={actual}."
         )
 
-    return frame.loc[:, list(expected_columns)].copy()
+    frame = frame.loc[:, list(expected_columns)].copy()
+    return _normalize_input_rows(frame, path.name, optional_blank_columns=optional_blank_columns)
 
 
 def _load_fixture_csv(
@@ -679,7 +689,7 @@ def _load_fixture_csv(
         raise DemoConfigurationError(f"Fixture do repositório ausente: {path}.")
 
     try:
-        frame = pd.read_csv(path, dtype=str, keep_default_na=False)
+        frame = pd.read_csv(path, dtype=str, keep_default_na=False, encoding="utf-8-sig")
     except Exception as exc:
         raise DemoConfigurationError(f"Falha ao ler fixture {path}: {exc}") from exc
 
@@ -707,7 +717,9 @@ def _value_from_key_table(
 
 
 def _require_decimal(value: object, field_name: str) -> Decimal:
-    text = _clean(value).replace(",", ".")
+    text = _clean(value)
+    if "," in text:
+        raise DemoInputError(f"{field_name} deve usar ponto como separador decimal.")
     try:
         result = Decimal(text)
     except (InvalidOperation, ValueError) as exc:
@@ -731,11 +743,32 @@ def _cents_to_money(value: object) -> Decimal:
 
 def _require_iso_date(value: str, field_name: str) -> date:
     try:
-        return date.fromisoformat(value)
+        parsed = date.fromisoformat(value)
     except ValueError as exc:
         raise DemoInputError(
             f"{field_name} deve usar formato ISO YYYY-MM-DD."
         ) from exc
+    if not (SUPPORTED_OPERATION_START <= parsed <= SUPPORTED_OPERATION_END):
+        raise DemoInputError(f"{field_name} fora do recorte suportado H1/2027.")
+    return parsed
+
+
+def _normalize_input_rows(
+    frame: pd.DataFrame,
+    filename: str,
+    *,
+    optional_blank_columns: frozenset[str],
+) -> pd.DataFrame:
+    cleaned = frame.copy()
+    for column in cleaned.columns:
+        cleaned[column] = cleaned[column].map(_clean)
+    fully_blank = cleaned.eq("").all(axis=1)
+    required_columns = [column for column in cleaned.columns if column not in optional_blank_columns]
+    partially_blank = cleaned.loc[:, required_columns].eq("").any(axis=1) & ~fully_blank
+    if partially_blank.any():
+        row_numbers = [int(index) + 2 for index in cleaned.index[partially_blank]]
+        raise DemoInputError(f"{filename} possui linha parcialmente preenchida: {row_numbers}.")
+    return cleaned.loc[~fully_blank].reset_index(drop=True)
 
 
 def _clean(value: object) -> str:

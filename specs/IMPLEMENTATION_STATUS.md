@@ -1,8 +1,8 @@
 # Estado de implementação do projeto
 
 **Repositório:** `lyvesmatufrj/contabilidade-parametrizada`  
-**Snapshot de referência:** `main@64676cab004efe75cf293f8de233ab1e127dc509`  
-**Data:** 2026-09-02
+**Snapshot de referência:** `main@001a1d0b15a9ed1aa191e5f1bad6934f9ced00cf`  
+**Data:** 2026-09-03
 
 Este arquivo registra o estado operacional do projeto e separa explicitamente:
 
@@ -81,7 +81,7 @@ Constituição / EC / LC
 | 10 | executor contrafactual | congelada | verificada | testes integrados | executor multi-cenário |
 | 11 | comparação tributária | congelada | verificada | testes integrados | comparação/relatório |
 | 12 | Simples 2027 puro × híbrido | **congelada funcionalmente** | **verificada** | patch `64676ca`; testes focados + regressão + full suite local reportada com `331 passed`; abertura manual no Excel 2013 sem reparo | `artifacts/demo_simples_2027_puro_vs_hibrido.xlsx` |
-| 13 | demo operacional Excel ↔ Python | **rascunho para aprovação** | aprovada | frontend workbench Excel → CSV validado manualmente | .xlsm permanece em workbench |
+| 13 | demo operacional Excel ↔ Python | **aprovada** | **implementada** | hardening automatizado da interface Excel ↔ Python; testes Python/VBA estáticos; stress Excel 2013 ainda pendente | .xlsm permanece em workbench |
 
 ### Nota sobre a Spec 12
 
@@ -102,8 +102,8 @@ A correção documental do cabeçalho não deve alterar a semântica da Spec 12.
 Commit de referência:
 
 ```text
-64676cab004efe75cf293f8de233ab1e127dc509
-patch-corrections-spec-12
+001a1d0b15a9ed1aa191e5f1bad6934f9ced00cf
+update2-spec-13
 ```
 
 Nesse baseline:
@@ -116,6 +116,22 @@ Nesse baseline:
 - abas tabulares vazias não recebem `Table` de uma única linha;
 - CBS 2026 permanece regressão;
 - Excel 2013 foi validado manualmente após o patch.
+
+## 4.1 Baseline de hardening da Spec 13
+
+Base de início:
+
+```text
+001a1d0b15a9ed1aa191e5f1bad6934f9ced00cf
+```
+
+Estado após a rodada automatizada:
+
+- Spec 13 aprovada;
+- implementação automatizada do hardening implementada quando a suíte passa;
+- `.xlsm` permanece como workbench;
+- stress manual Excel 2013 pendente;
+- a Spec 13 não está congelada/verificada até a conclusão do protocolo manual.
 
 ---
 
