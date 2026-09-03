@@ -1,6 +1,6 @@
 # Spec 13 — Demo operacional Excel ↔ Python
 
-**Status da spec:** rascunho para aprovação  
+**Status da spec:** aprovada  
 **Versão:** `spec_13_demo_operacional_v0_1`  
 **Base do repositório:** `64676cab004efe75cf293f8de233ab1e127dc509`  
 **Data:** 2026-09-02  

@@ -81,7 +81,7 @@ Constituição / EC / LC
 | 10 | executor contrafactual | congelada | verificada | testes integrados | executor multi-cenário |
 | 11 | comparação tributária | congelada | verificada | testes integrados | comparação/relatório |
 | 12 | Simples 2027 puro × híbrido | **congelada funcionalmente** | **verificada** | patch `64676ca`; testes focados + regressão + full suite local reportada com `331 passed`; abertura manual no Excel 2013 sem reparo | `artifacts/demo_simples_2027_puro_vs_hibrido.xlsx` |
-| 13 | demo operacional Excel ↔ Python | **rascunho para aprovação** | não iniciada | — | protótipos devem permanecer em workbench até estabilização |
+| 13 | demo operacional Excel ↔ Python | **rascunho para aprovação** | aprovada | frontend workbench Excel → CSV validado manualmente | .xlsm permanece em workbench |
 
 ### Nota sobre a Spec 12
 
