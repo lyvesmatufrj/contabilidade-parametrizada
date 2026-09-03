@@ -1,7 +1,7 @@
 # Estado de implementação do projeto
 
 **Repositório:** `lyvesmatufrj/contabilidade-parametrizada`  
-**Snapshot de referência:** `main@001a1d0b15a9ed1aa191e5f1bad6934f9ced00cf`  
+**Snapshot de referência:** `main@263ba0181bd985789be9fefe72e7225204e7af77`
 **Data:** 2026-09-03
 
 Este arquivo registra o estado operacional do projeto e separa explicitamente:
@@ -102,8 +102,8 @@ A correção documental do cabeçalho não deve alterar a semântica da Spec 12.
 Commit de referência:
 
 ```text
-001a1d0b15a9ed1aa191e5f1bad6934f9ced00cf
-update2-spec-13
+263ba0181bd985789be9fefe72e7225204e7af77
+updatde3-spec-13-DemoOperacional-excel/vba/python
 ```
 
 Nesse baseline:
@@ -124,6 +124,12 @@ Base de início:
 ```text
 001a1d0b15a9ed1aa191e5f1bad6934f9ced00cf
 ```
+Commit que materializa o hardening automatizado:
+
+```text
+263ba0181bd985789be9fefe72e7225204e7af77
+```
+
 
 Estado após a rodada automatizada:
 
