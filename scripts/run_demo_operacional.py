@@ -55,14 +55,17 @@ def execute(input_dir: str | Path, output_dir: str | Path) -> int:
         result.report.scenario_results.to_csv(
             output_path / "scenario_results.csv",
             index=False,
+            encoding="utf-8-sig",
         )
         result.report.comparison_results.to_csv(
             output_path / "comparison_results.csv",
             index=False,
+            encoding="utf-8-sig",
         )
         result.memory_results.to_csv(
             output_path / "memory_results.csv",
             index=False,
+            encoding="utf-8-sig",
         )
 
         _write_status(
@@ -125,7 +128,7 @@ def _write_status(
         ],
         columns=RUN_STATUS_COLUMNS,
     )
-    frame.to_csv(output_dir / "run_status.csv", index=False)
+    frame.to_csv(output_dir / "run_status.csv", index=False,encoding="utf-8-sig")
 
 
 def _best_effort_run_id(input_dir: Path) -> str:
